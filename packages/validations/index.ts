@@ -12,3 +12,16 @@ export const CredentialSchema = z.object({
 });
 
 export type CredentialInput = z.infer<typeof CredentialSchema>;
+
+export const TriggerTypeEnum = z.enum(["WebHook", "Manual", "Cron"]);
+
+export const WorkflowCreateSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  trigger: TriggerTypeEnum,
+});
+
+export const NodeSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  workflowId: z.string(),
+  trigger: TriggerTypeEnum,
+});

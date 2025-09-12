@@ -19,6 +19,7 @@ model User {
   password    String
   createdAt   DateTime      @default(now())
   Credentials Credentials[]
+  Workflow    Workflow[]
 }
 
 model Credentials {
@@ -30,4 +31,30 @@ model Credentials {
   data      Json     @db.JsonB
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model Workflow {
+  id        String      @id @default(uuid())
+  title     String
+  enabled   Boolean     @default(false)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  Node      Node[]
+  trigger   TriggerType
+  createdAt DateTime    @default(now())
+}
+
+model Node {
+  id         String      @id @default(uuid())
+  title      String
+  workflowId String
+  workflow   Workflow    @relation(fields: [workflowId], references: [id])
+  trigger    TriggerType
+  enabled    Boolean     @default(false)
+}
+
+enum TriggerType {
+  WebHook
+  Manual
+  Cron
 }
