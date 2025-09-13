@@ -20,7 +20,7 @@ router.post("/create", authMiddleware, async (req, res) => {
   if (user.status !== 200) {
     return res.status(user.status).json({ message: user.message });
   }
-
+  console.log(req.body);
   const parsedData = CredentialSchema.safeParse(req.body);
   if (!parsedData.success) {
     return res.status(200).json({
@@ -30,7 +30,7 @@ router.post("/create", authMiddleware, async (req, res) => {
   }
 
   try {
-    const credentails = prisma.credentials.create({
+    const credentails = await prisma.credentials.create({
       data: {
         name: parsedData.data.name,
         type: parsedData.data.type,
@@ -69,7 +69,7 @@ router.get("/get", authMiddleware, async (req, res) => {
         userId,
       },
     });
-
+    console.log("credentails", credentails);
     return res.status(200).json({
       credentails,
     });
@@ -84,10 +84,12 @@ router.get("/get", authMiddleware, async (req, res) => {
 router.delete("/delete/:id", authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { id } = req.params;
-  if (!userId)
-    return res.status(404).json({
+
+  if (!userId) {
+    return res.status(401).json({
       message: "Unauthenticated",
     });
+  }
 
   const user = await userCheck(userId);
 
@@ -96,22 +98,29 @@ router.delete("/delete/:id", authMiddleware, async (req, res) => {
   }
 
   try {
-    const credentails = await prisma.credentials.findUnique({
-      where: {
-        id,
-      },
+    const credentials = await prisma.credentials.findUnique({
+      where: { id },
     });
-    if (!credentails)
+
+    if (!credentials) {
       return res.status(404).json({
-        message: "credentails not found",
+        message: "Credentials not found",
       });
+    }
 
     await prisma.credentials.delete({
-      where: {
-        id: credentails?.id,
-      },
+      where: { id: credentials.id },
     });
-  } catch (error) {}
+
+    return res.status(200).json({
+      message: "Credentials deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting credentials:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
 });
 
 router.put("/update/:id", authMiddleware, async (req, res) => {

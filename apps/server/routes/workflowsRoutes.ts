@@ -6,6 +6,24 @@ import { prisma } from "@repo/db/client";
 
 const router = express.Router();
 
+interface NodeInput {
+  id?: string;
+  title: string;
+  workflowId: string;
+  trigger: "WebHook" | "Manual" | "Cron"; //
+  enabled: boolean;
+  data: Record<string, any>;
+  positionX: number;
+  positionY: number;
+}
+
+interface EdgeInput {
+  id?: string;
+  workflowId: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+}
+
 /**
  * crud for workflows
  */
@@ -122,6 +140,54 @@ router.delete("/:id", authMiddleware, async (req, res) => {
     res.status(200).json({ message: "workflow deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "internal server error", error });
+  }
+});
+
+//webhook
+
+router.post("/:id", authMiddleware, async (req, res) => {
+  const workflowId = req.params.id;
+  const { title, enabled, nodes, edges } = req.body;
+  const userId = req.userId;
+
+  if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+  const user = await userCheck(userId);
+  if (user.status !== 200) {
+    return res.status(user.status).json({ message: user.message });
+  }
+
+  try {
+    const updatedWorkflow = await prisma.workflow.update({
+      where: { id: workflowId },
+      data: {
+        title,
+        enabled,
+        Node: {
+          deleteMany: { workflowId }, // Clear previous nodes
+          create: nodes.map((n: NodeInput) => ({
+            title: n.title,
+            trigger: n.trigger,
+            enabled: n.enabled,
+            data: n.data,
+            positionX: n.positionX,
+            positionY: n.positionY,
+          })),
+        },
+        Edge: {
+          deleteMany: { workflowId }, // Clear previous edges
+          create: edges.map((e: EdgeInput) => ({
+            sourceNodeId: e.sourceNodeId,
+            targetNodeId: e.targetNodeId,
+          })),
+        },
+      },
+    });
+
+    res.status(200).json(updatedWorkflow);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to update workflow" });
   }
 });
 

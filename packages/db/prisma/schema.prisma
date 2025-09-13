@@ -42,6 +42,7 @@ model Workflow {
   Node      Node[]
   trigger   TriggerType
   createdAt DateTime    @default(now())
+  Edge      Edge[]
 }
 
 model Node {
@@ -51,6 +52,17 @@ model Node {
   workflow   Workflow    @relation(fields: [workflowId], references: [id])
   trigger    TriggerType
   enabled    Boolean     @default(false)
+  data       Json        @db.JsonB
+  positionX  Float
+  positionY  Float
+}
+
+model Edge {
+  id           String   @id @default(uuid())
+  workflowId   String
+  workflow     Workflow @relation(fields: [workflowId], references: [id])
+  sourceNodeId String
+  targetNodeId String
 }
 
 enum TriggerType {
