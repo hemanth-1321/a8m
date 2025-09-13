@@ -10,7 +10,6 @@ const router = express.Router();
  * crud for workflows
  */
 
-// Create workflow
 router.post("/create", authMiddleware, async (req, res) => {
   const parsedData = WorkflowCreateSchema.safeParse(req.body);
   if (!parsedData.success) {
@@ -43,7 +42,6 @@ router.post("/create", authMiddleware, async (req, res) => {
   }
 });
 
-// Get all workflows for user
 router.get("/", authMiddleware, async (req, res) => {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ message: "unauthorized" });
@@ -56,7 +54,6 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-// Get workflow by ID
 router.get("/:id", authMiddleware, async (req, res) => {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ message: "unauthorized" });
@@ -78,7 +75,6 @@ router.get("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// Update workflow
 router.put("/:id", authMiddleware, async (req, res) => {
   const { id } = req.params;
   const parsedData = WorkflowCreateSchema.partial().safeParse(req.body); // allow partial updates
@@ -107,7 +103,6 @@ router.put("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// Delete workflow
 router.delete("/:id", authMiddleware, async (req, res) => {
   const { id } = req.params;
   const userId = req.userId;
