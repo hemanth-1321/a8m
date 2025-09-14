@@ -72,27 +72,6 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-router.get("/:id", authMiddleware, async (req, res) => {
-  const userId = req.userId;
-  if (!userId) return res.status(401).json({ message: "unauthorized" });
-
-  const { id } = req.params;
-
-  try {
-    const workflow = await prisma.workflow.findFirst({
-      where: { id, userId },
-    });
-
-    if (!workflow) {
-      return res.status(404).json({ message: "workflow not found" });
-    }
-
-    res.status(200).json({ workflow });
-  } catch (error) {
-    res.status(500).json({ message: "internal server error", error });
-  }
-});
-
 router.put("/:id", authMiddleware, async (req, res) => {
   const { id } = req.params;
   const parsedData = WorkflowCreateSchema.partial().safeParse(req.body); // allow partial updates
@@ -143,8 +122,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-//webhook
-
+//nodes postendpoint
 router.post("/:id", authMiddleware, async (req, res) => {
   const workflowId = req.params.id;
   const { title, enabled, nodes, edges } = req.body;
@@ -164,8 +142,9 @@ router.post("/:id", authMiddleware, async (req, res) => {
         title,
         enabled,
         Node: {
-          deleteMany: { workflowId }, // Clear previous nodes
-          create: nodes.map((n: NodeInput) => ({
+          deleteMany: { workflowId }, // Delete existing nodes
+          create: nodes.map((n: any) => ({
+            id: n.id,
             title: n.title,
             trigger: n.trigger,
             enabled: n.enabled,
@@ -175,19 +154,56 @@ router.post("/:id", authMiddleware, async (req, res) => {
           })),
         },
         Edge: {
-          deleteMany: { workflowId }, // Clear previous edges
-          create: edges.map((e: EdgeInput) => ({
+          deleteMany: { workflowId }, // Delete existing edges
+          create: edges.map((e: any) => ({
+            id: e.id,
             sourceNodeId: e.sourceNodeId,
             targetNodeId: e.targetNodeId,
           })),
         },
+      },
+      include: {
+        Node: true,
+        Edge: true,
       },
     });
 
     res.status(200).json(updatedWorkflow);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Failed to update workflow" });
+    res.status(500).json({ message: "Failed to update workflow", error });
+  }
+});
+
+router.get("/:id", authMiddleware, async (req, res) => {
+  const workflowId = req.params.id;
+  const userId = req.userId;
+
+  if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+  const user = await userCheck(userId);
+  if (user.status !== 200) {
+    return res.status(user.status).json({ message: user.message });
+  }
+
+  try {
+    const workflow = await prisma.workflow.findUnique({
+      where: {
+        id: workflowId,
+      },
+      include: {
+        Node: true,
+        Edge: true,
+      },
+    });
+    return res.status(200).json({
+      workflow,
+    });
+  } catch (error) {
+    console.log("error in workflow get", error);
+    res.status(500).json({
+      message: "internal server error",
+    });
   }
 });
 

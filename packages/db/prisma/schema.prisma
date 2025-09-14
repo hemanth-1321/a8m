@@ -49,7 +49,7 @@ model Node {
   id         String      @id @default(uuid())
   title      String
   workflowId String
-  workflow   Workflow    @relation(fields: [workflowId], references: [id])
+  workflow   Workflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   trigger    TriggerType
   enabled    Boolean     @default(false)
   data       Json        @db.JsonB
@@ -60,7 +60,7 @@ model Node {
 model Edge {
   id           String   @id @default(uuid())
   workflowId   String
-  workflow     Workflow @relation(fields: [workflowId], references: [id])
+  workflow     Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   sourceNodeId String
   targetNodeId String
 }

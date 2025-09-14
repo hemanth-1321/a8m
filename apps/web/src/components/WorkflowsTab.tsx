@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { BACKEND_URL, TOKEN } from "@/lib/config";
 import { Workflow } from "@/lib/types";
 import CreateWorkflowDialog from "@/components/CreateWorkflowDialog";
+import { Trash2 } from "lucide-react";
 
 export default function WorkflowsTab() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -26,13 +27,14 @@ export default function WorkflowsTab() {
       const response = await axios.get(`${BACKEND_URL}/workflows`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (response.data) {
         setWorkflows(response.data.workflows);
 
         // Initialize toggle states
         const toggles: Record<string, boolean> = {};
         response.data.workflows.forEach(
-          (w: Workflow) => (toggles[w.id] = false)
+          (w: Workflow) => (toggles[w.id] = true)
         );
         setWorkflowToggles(toggles);
       }
@@ -54,7 +56,28 @@ export default function WorkflowsTab() {
     loadWorkflows();
   };
 
-  // Handle workflow click
+  const handleDeleteWorkflow = async (id: string) => {
+    const token = localStorage.getItem(TOKEN);
+    setLoading(true);
+
+    try {
+      await axios.delete(`${BACKEND_URL}/workflows/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      toast.success("Workflow deleted successfully");
+
+      // Reload workflows after deletion
+      await loadWorkflows();
+    } catch (error) {
+      console.error(error);
+      toast.error("Unable to delete workflow");
+      setLoading(false);
+    }
+  };
+
   const handleWorkflowClick = (workflow: Workflow) => {
     if (workflowToggles[workflow.id]) {
       router.push(`/workflow/${workflow.id}`);
@@ -66,7 +89,6 @@ export default function WorkflowsTab() {
     }
   };
 
-  // Handle toggle change
   const handleToggleChange = (workflowId: string, checked: boolean) => {
     setWorkflowToggles((prev) => ({ ...prev, [workflowId]: checked }));
     const workflow = workflows.find((w) => w.id === workflowId);
@@ -175,8 +197,8 @@ export default function WorkflowsTab() {
                     </div>
                   </div>
 
-                  {/* Toggle */}
-                  <div className="ml-6 flex-shrink-0">
+                  {/* Toggle and Delete Button */}
+                  <div className="ml-6 flex-shrink-0 flex items-center space-x-3">
                     <Switch
                       checked={workflowToggles[workflow.id] || false}
                       onCheckedChange={(checked) =>
@@ -198,6 +220,21 @@ export default function WorkflowsTab() {
                         }`}
                       />
                     </Switch>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteWorkflow(workflow.id);
+                      }}
+                      className="p-1 text-red-500 hover:text-red-700"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <div className=" w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 size={20} className="cursor-pointer" />
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>

@@ -2,18 +2,26 @@
 import { useState } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { Trash2 } from "lucide-react";
+import * as Icons from "lucide-react";
 
 export default function ProviderNode({ id, data, deleteNode }: any) {
-  const { name, icon: Icon } = data;
+  const { name, icon: iconName } = data;
+
+  const Icon = iconName
+    ? (Icons[iconName as keyof typeof Icons] as React.ComponentType<{
+        size?: number;
+        className?: string;
+      }>)
+    : null;
+
   const [hovered, setHovered] = useState(false);
 
   return (
     <div
-      className="group relative bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-2 min-w-[140px]"
+      className="group relative bg-gray-300 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-2 min-w-[140px]"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Main content */}
       <div className="flex items-center gap-2">
         {Icon && (
           <div className="flex-shrink-0 w-6 h-6 bg-gray-50 rounded-md flex items-center justify-center">
@@ -25,7 +33,6 @@ export default function ProviderNode({ id, data, deleteNode }: any) {
         </span>
       </div>
 
-      {/* Delete button - appears on hover */}
       {hovered && (
         <button
           onClick={() => deleteNode(id)}
@@ -36,7 +43,6 @@ export default function ProviderNode({ id, data, deleteNode }: any) {
         </button>
       )}
 
-      {/* Connection handles */}
       <Handle
         type="target"
         position={Position.Left}
@@ -47,8 +53,6 @@ export default function ProviderNode({ id, data, deleteNode }: any) {
         position={Position.Right}
         className="w-2.5 h-2.5 bg-gray-400 border-2 border-white hover:bg-blue-500 transition-colors"
       />
-
-      {/* Removed accent line below the node */}
     </div>
   );
 }

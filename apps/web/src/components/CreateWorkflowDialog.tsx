@@ -123,7 +123,7 @@ export default function CreateWorkflowDialog({ onCreated }: Props) {
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogTrigger asChild>
-        <Button className="bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all duration-200 hover:shadow-md">
+        <Button className="cursor-pointer bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all duration-200 hover:shadow-md">
           <Plus className="w-4 h-4 mr-2" />
           Create Workflow
         </Button>
