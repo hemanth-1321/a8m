@@ -11,7 +11,7 @@ import {
   Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import Sidebar from "@/components/Slidebar";
 import ProviderNode from "@/components/ProviderNode";
@@ -19,6 +19,7 @@ import { BACKEND_URL, TOKEN } from "@/lib/config";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from "uuid";
+import { useAuthStore } from "@/store/authStore";
 
 interface NodeData {
   name: string;
@@ -31,7 +32,18 @@ interface NodeData {
 
 export default function Page() {
   const { id } = useParams();
+  const router = useRouter();
+  const { token, loadToken } = useAuthStore();
 
+  useEffect(() => {
+    loadToken();
+  }, [loadToken]);
+
+  useEffect(() => {
+    if (token === null) {
+      router.push("/auth");
+    }
+  }, [token, router]);
   const [nodes, setNodes] = useState<Node<NodeData>[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [workflowTitle, setWorkflowTitle] = useState("My Updated Workflow");
@@ -57,9 +69,12 @@ export default function Page() {
     setEdges((eds) => addEdge(newEdge, eds));
   }, []);
 
-  // Add new node
   const addNode = (provider: any) => {
+    console.log("inside add node", provider);
     const newId = uuidv4();
+
+    const providerData = provider.data || {};
+
     setNodes((nds) => [
       ...nds,
       {
@@ -70,9 +85,9 @@ export default function Page() {
           y: 100 + Math.random() * 200,
         },
         data: {
-          name: provider.name,
-          icon: provider.icon,
-          color: provider.color,
+          // keep provider data as-is
+          ...provider,
+          ...providerData,
           trigger: "Manual",
           enabled: true,
         },
@@ -165,7 +180,7 @@ export default function Page() {
         targetNodeId: e.target,
       })),
     };
-
+    console.log("payload", payload);
     try {
       const response = await axios.post(
         `${BACKEND_URL}/workflows/${id}`,
@@ -203,7 +218,7 @@ export default function Page() {
       setNodes(syncedNodes);
       setEdges(syncedEdges);
 
-      console.log("Workflow saved:", savedWf);
+      // console.log("Workflow saved:", savedWf);
       toast.success("Workflow saved successfully!");
     } catch (error: any) {
       console.error("Failed to save workflow:", error.response || error);
@@ -237,8 +252,8 @@ export default function Page() {
                 value={workflowTitle}
                 onChange={(e) => setWorkflowTitle(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm 
-                     focus:outline-none focus:ring-2 focus:ring-purple-500 
-                     focus:border-transparent bg-white"
+                      focus:outline-none focus:ring-2 focus:ring-purple-500 
+                      focus:border-transparent bg-white"
                 placeholder="Enter workflow name"
               />
             </div>
@@ -265,9 +280,9 @@ export default function Page() {
             <Button
               onClick={saveWorkflow}
               className="bg-gradient-to-r from-emerald-500 to-teal-600 
-                   hover:from-emerald-600 hover:to-teal-700 text-white 
-                   px-6 py-2 rounded-lg font-medium shadow-lg 
-                   transition-all duration-200 transform hover:scale-105"
+                    hover:from-emerald-600 hover:to-teal-700 text-white 
+                    px-6 py-2 rounded-lg font-medium shadow-lg 
+                    transition-all duration-200 transform hover:scale-105"
             >
               Save Workflow
             </Button>

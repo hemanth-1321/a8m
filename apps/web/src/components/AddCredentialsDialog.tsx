@@ -15,19 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import {
-  Plus,
-  Loader2,
-  Key,
-  Check,
-  ArrowLeft,
-  Bot,
-  MessageSquare,
-  Mail,
-  Send,
-  Sparkles,
-  Zap,
-} from "lucide-react";
+import { Plus, Loader2, Key, Check, ArrowLeft, Trash2 } from "lucide-react";
 import { providers } from "@/lib/actionProviders";
 
 interface Props {
@@ -38,7 +26,7 @@ export default function AddCredentialsDialog({ onCredentialsAdded }: Props) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"select" | "configure">("select");
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
-  const [credData, setCredData] = useState<Record<string, string>>({});
+  const [credData, setCredData] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
 
   const handleProviderSelect = (providerId: string) => {
@@ -62,16 +50,6 @@ export default function AddCredentialsDialog({ onCredentialsAdded }: Props) {
     const provider = providers.find((p) => p.id === selectedProvider);
     if (!provider) return;
 
-    const missingFields = provider.fields.filter(
-      (field) => !credData[field.key]?.trim()
-    );
-    if (missingFields.length > 0) {
-      toast.error("Missing required fields", {
-        description: `Please provide: ${missingFields.map((f) => f.label).join(", ")}`,
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -83,7 +61,7 @@ export default function AddCredentialsDialog({ onCredentialsAdded }: Props) {
         {
           name: provider.name.toLowerCase(),
           type: provider.type,
-          data: credData,
+          data: credData, // dump whole JSON, backend accepts raw
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -95,7 +73,6 @@ export default function AddCredentialsDialog({ onCredentialsAdded }: Props) {
         duration: 4000,
       });
 
-      // Reset state and close dialog
       setSelectedProvider(null);
       setCredData({});
       setStep("select");
@@ -155,11 +132,9 @@ export default function AddCredentialsDialog({ onCredentialsAdded }: Props) {
                   className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-slate-300"
                   onClick={() => handleProviderSelect(provider.id)}
                 >
-                  {/* Gradient background */}
                   <div
                     className={`absolute inset-0 bg-gradient-to-br ${provider.color} opacity-0 group-hover:opacity-5 transition-opacity duration-200`}
                   />
-
                   <div className="relative flex flex-col items-center space-y-3">
                     <div
                       className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${provider.color}`}
@@ -202,28 +177,100 @@ export default function AddCredentialsDialog({ onCredentialsAdded }: Props) {
 
             {/* Form fields */}
             <div className="space-y-4">
-              {selectedProviderData?.fields.map((field) => (
-                <div key={field.key} className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-700">
-                    {field.label}
-                  </Label>
-                  <Input
-                    type="text"
-                    value={credData[field.key] || ""}
-                    onChange={(e) =>
-                      setCredData({ ...credData, [field.key]: e.target.value })
-                    }
-                    placeholder={field.placeholder}
-                    disabled={loading}
-                    className="transition-all duration-200 focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
-                  />
-                  {field.key.includes("key") || field.key.includes("token") ? (
-                    <p className="text-xs text-slate-500">
-                      Your credentials are encrypted and stored securely
-                    </p>
-                  ) : null}
-                </div>
-              ))}
+              {selectedProviderData?.fields.map((field) => {
+                if (field.repeatable && field.type === "array") {
+                  const currentValues = credData[field.key] || [];
+
+                  const addField = () => {
+                    setCredData({
+                      ...credData,
+                      [field.key]: [...currentValues, {}],
+                    });
+                  };
+
+                  const removeField = (idx: number) => {
+                    const updated = currentValues.filter(
+                      (_: any, i: number) => i !== idx
+                    );
+                    setCredData({ ...credData, [field.key]: updated });
+                  };
+
+                  const updateField = (
+                    idx: number,
+                    subKey: string,
+                    value: string
+                  ) => {
+                    const updated = [...currentValues];
+                    updated[idx] = { ...updated[idx], [subKey]: value };
+                    setCredData({ ...credData, [field.key]: updated });
+                  };
+
+                  return (
+                    <div key={field.key} className="space-y-3">
+                      <Label className="text-sm font-medium text-slate-700">
+                        {field.label}
+                      </Label>
+                      {currentValues.map((item: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 border rounded-lg p-3 bg-slate-50"
+                        >
+                          {field.fields.map((subField: any) => (
+                            <Input
+                              key={subField.key}
+                              placeholder={subField.placeholder}
+                              value={item[subField.key] || ""}
+                              onChange={(e) =>
+                                updateField(idx, subField.key, e.target.value)
+                              }
+                              className="flex-1"
+                              disabled={loading}
+                            />
+                          ))}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeField(idx)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addField}
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" /> Add Field
+                      </Button>
+                    </div>
+                  );
+                }
+
+                // Normal single field
+                return (
+                  <div key={field.key} className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">
+                      {field.label}
+                    </Label>
+                    <Input
+                      type="text"
+                      value={credData[field.key] || ""}
+                      onChange={(e) =>
+                        setCredData({
+                          ...credData,
+                          [field.key]: e.target.value,
+                        })
+                      }
+                      placeholder={field.placeholder}
+                      disabled={loading}
+                      className="transition-all duration-200 focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -240,7 +287,6 @@ export default function AddCredentialsDialog({ onCredentialsAdded }: Props) {
               Back
             </Button>
           )}
-
           {step === "select" ? (
             <Button
               variant="outline"

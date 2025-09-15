@@ -1,14 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
 import WorkflowsTab from "@/components/WorkflowsTab";
 import CredentialsTab from "@/components/CredentialsTab";
+import { useAuthStore } from "@/store/authStore";
 
 export default function OverviewPage() {
-  const [activeTab, setActiveTab] = useState<"workflows" | "credentials">(
-    "workflows"
-  );
+  const router = useRouter();
+  const { token, loadToken } = useAuthStore();
+
+  useEffect(() => {
+    loadToken();
+  }, [loadToken]);
+
+  useEffect(() => {
+    if (token === null) {
+      router.push("/auth");
+    }
+  }, [token, router]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -25,14 +36,7 @@ export default function OverviewPage() {
 
         {/* Tabs */}
         <section>
-          <Tabs
-            defaultValue="workflows"
-            value={activeTab}
-            onValueChange={(val) =>
-              setActiveTab(val as "workflows" | "credentials")
-            }
-            className="space-y-6"
-          >
+          <Tabs defaultValue="workflows" className="space-y-6">
             <TabsList className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-100 p-1">
               <TabsTrigger
                 value="workflows"

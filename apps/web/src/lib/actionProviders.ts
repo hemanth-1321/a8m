@@ -1,15 +1,11 @@
 import {
-  Plus,
-  Loader2,
-  Key,
-  Check,
-  ArrowLeft,
   Bot,
   MessageSquare,
   Mail,
   Send,
   Sparkles,
   Zap,
+  FileText,
 } from "lucide-react";
 
 export const providers = [
@@ -72,5 +68,14 @@ export const providers = [
     color: "from-yellow-500 to-orange-600",
     description: "High-speed AI inference",
     fields: [{ label: "API Key", key: "api_key", placeholder: "gsk-xxxx" }],
+  },
+  {
+    id: "form",
+    name: "Form",
+    type: "form-builder",
+    icon: FileText,
+    color: "from-blue-500 to-indigo-600",
+    description: "Custom form builder",
+    fields: [], // user-defined
   },
 ];

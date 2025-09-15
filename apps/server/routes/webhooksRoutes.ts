@@ -9,7 +9,8 @@ const router = express.Router();
 router.post("/:workflowId", authMiddleware, async (req, res) => {
   const userId = req.userId;
   const { workflowId } = req.params;
-
+  const { data } = req.body;
+  console.log(data);
   if (!userId) {
     return res.status(404).json({
       message: "unAuthenticated",
@@ -70,7 +71,7 @@ router.post("/:workflowId", authMiddleware, async (req, res) => {
 
       graph[currentNode].forEach((neighborId: any) => {
         //points to the next node
-        // console.log(currentNode, "points to", neighborId);
+        // console.log(currentNode, points to, neighborId);
         indegree[neighborId]--; //if indegree is 1 makes it 0
         if (indegree[neighborId] === 0) {
           queue.push(neighborId);
@@ -90,6 +91,7 @@ router.post("/:workflowId", authMiddleware, async (req, res) => {
           JSON.stringify({
             ...node,
             workflowId,
+            data,
           })
         );
       }
@@ -103,6 +105,32 @@ router.post("/:workflowId", authMiddleware, async (req, res) => {
     res.status(500).json({
       message: "error hitting the webhook,Please try again",
     });
+  }
+});
+
+router.get("/:workflowId", async (req, res) => {
+  const { workflowId } = req.params;
+
+  try {
+    const workflow = await prisma.workflow.findFirst({
+      where: { id: workflowId },
+    });
+
+    if (!workflow) {
+      return res.status(404).json({ message: "Workflow not found" });
+    }
+
+    const credentials = await prisma.credentials.findMany({
+      where: { userId: workflow.userId },
+    });
+
+    return res.status(200).json({
+      ...workflow,
+      credentials,
+    });
+  } catch (error) {
+    console.error("Server error fetching workflow:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 

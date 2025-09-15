@@ -23,14 +23,15 @@ model User {
 }
 
 model Credentials {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  id        String     @id @default(uuid())
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now())
   name      String
   type      String //platform
-  data      Json     @db.JsonB
+  data      Json       @db.JsonB
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User       @relation(fields: [userId], references: [id])
+  workflows Workflow[] @relation("WorkflowCredentials")
 }
 
 model Workflow {
@@ -43,6 +44,8 @@ model Workflow {
   trigger   TriggerType
   createdAt DateTime    @default(now())
   Edge      Edge[]
+
+  credentials Credentials[] @relation("WorkflowCredentials")
 }
 
 model Node {
@@ -55,6 +58,7 @@ model Node {
   data       Json        @db.JsonB
   positionX  Float
   positionY  Float
+  type       NodeType?
 }
 
 model Edge {
@@ -69,4 +73,10 @@ enum TriggerType {
   WebHook
   Manual
   Cron
+}
+
+enum NodeType {
+  FORM
+  ACTION
+  TRIGGER
 }

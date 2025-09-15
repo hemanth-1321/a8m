@@ -6,12 +6,14 @@ export const authMiddleware = (
   next: NextFunction
 ) => {
   const authHeader = req.headers.authorization;
+
   if (!authHeader) {
     return res.status(404).json({
       message: "unauthorized",
     });
   }
   const token = authHeader?.split(" ")[1];
+  console.log("token", token);
   if (!token) {
     return res.status(400).json({
       error: "invalid token",

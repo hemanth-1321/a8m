@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { BACKEND_URL, TOKEN } from "@/lib/config";
-
+import { BACKEND_URL } from "@/lib/config";
+import { useAuthStore } from "@/store/authStore";
 const SignIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
+  const { setToken } = useAuthStore.getState();
 
   const handleSignIn = async () => {
     try {
@@ -19,8 +20,7 @@ const SignIn = () => {
         email,
         password,
       });
-      const token = res.data.token;
-      localStorage.setItem(TOKEN, token);
+      setToken(res.data.token);
       router.push("/home/workflows");
     } catch (err) {
       console.error(err);

@@ -3,22 +3,20 @@ import { TOKEN } from "@/lib/config";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-
+import { useAuthStore } from "@/store/authStore";
 export const Appbar = () => {
-  const [token, setToken] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const { token, setToken, removeToken, loadToken } = useAuthStore();
 
   useEffect(() => {
     setMounted(true);
-    const storedToken = localStorage.getItem(TOKEN);
-    setToken(storedToken);
-  }, []);
+    loadToken();
+  }, [loadToken]);
 
   const handleLogout = () => {
     localStorage.removeItem(TOKEN);
-    setToken(null);
-    window.location.reload();
+    removeToken();
   };
 
   return (
