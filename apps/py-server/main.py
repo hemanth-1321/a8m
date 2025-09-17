@@ -1,7 +1,9 @@
 
 from fastapi import FastAPI
 from api.routes.AuthRoutes import USER_ROUTES
+from dotenv import load_dotenv
 
+load_dotenv()
 
 app=FastAPI()
 

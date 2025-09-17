@@ -1,8 +1,13 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import declarative_base
+from dotenv import load_dotenv
 
-SQLALCHEMY_DATABASE_URL = "postgresql://neondb_owner:npg_7vQeK4yBnJAV@ep-sweet-union-a1irtqs6-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+load_dotenv()
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+if not SQLALCHEMY_DATABASE_URL:
+    raise ValueError("DATABASE_URL is not set in .env")
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
