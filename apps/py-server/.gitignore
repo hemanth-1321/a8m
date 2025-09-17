@@ -1,0 +1,72 @@
+# ----------------------------
+# Python
+# ----------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+.venv/
+env/
+ENV/
+*.env
+
+# Bytecode cache
+*.egg-info/
+.eggs/
+*.egg
+dist/
+build/
+
+# SQLite (if used locally)
+*.db
+*.sqlite3
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+
+# Logs
+*.log
+*.out
+*.err
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Alembic (DB migrations)
+alembic/versions/*.pyc
+alembic/versions/__pycache__/
+
+# ----------------------------
+# Node.js (if frontend included)
+# ----------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp.*
+.pnp.js
+.next/
+out/
+
+# ----------------------------
+# FastAPI specific
+# ----------------------------
+# Uvicorn reload cache
+*.pid
