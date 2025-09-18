@@ -1,11 +1,18 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-from db.models import Credentials
+from db.models import User,Credentials
 from models.schema import ResponseModel, CredentialsBase,CredentialResponse
 from models.response import Http
 from uuid import UUID
 
 def create_credentials(db: Session, credentials_data: CredentialsBase) -> ResponseModel:
+    if not create_credentials.data.user_id:
+         return ResponseModel(
+            status=Http.StatusNotFound,
+            message="UnAuthorized",
+            data=None
+        )
+        
     try:
         new_credentials = Credentials(
             name=credentials_data.name,
@@ -43,7 +50,22 @@ def create_credentials(db: Session, credentials_data: CredentialsBase) -> Respon
         
 
 def get_credentials(db:Session,user_id)->ResponseModel:
+
+    if not user_id:
+        return ResponseModel(
+            status=Http.StatusNotFound,
+            message="UnAuthorized",
+            data=None
+        )
+        
     try:
+        user=db.query(User).filter(User.id==user_id).first()
+        if not user:
+            return ResponseModel(
+                status=Http.StatusNotFound,
+                message="User not found",
+                data=None
+            )
         creds=db.query(Credentials).filter(Credentials.user_id==user_id).all()
         response_data = []
         for c in creds:
@@ -69,7 +91,22 @@ def get_credentials(db:Session,user_id)->ResponseModel:
        
         
 def delete_credentails(db:Session,credential_id: UUID,user_id:str)->ResponseModel:
+    if not user_id:
+        return ResponseModel(
+            status=Http.StatusNotFound,
+            message="UnAuthorized",
+            data=None
+        )
+        
     try:
+        user=db.query(User).filter(User.id==user_id).first()
+        if not user:
+            return ResponseModel(
+                status=Http.StatusNotFound,
+                message="User not found",
+                data=None
+            )
+        
         credential=db.query(Credentials).filter(Credentials.id==credential_id,Credentials.user_id==user_id).first()
         if not credential:
             return ResponseModel(

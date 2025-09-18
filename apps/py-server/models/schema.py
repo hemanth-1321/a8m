@@ -1,5 +1,6 @@
 from typing import Generic, TypeVar, Optional, Dict, Any
-from pydantic import BaseModel
+from pydantic import BaseModel,Field
+from enum import Enum
 from uuid import UUID
 
 T = TypeVar("T")
@@ -43,6 +44,38 @@ class CredentialResponse(BaseModel):
 
     class Config:
         from_attributes = True  
+
+class TriggerTypeEnum(str,Enum):
+    WEBHOOK = "WebHook"
+    MANUAL = "Manual"
+    CRON = "Cron"
+    
+
+class workflowresponse(BaseModel):
+    id: UUID
+    title: str
+    user_id: UUID
+    class Config:
+        from_attributes = True  
+class nodeResponse(BaseModel):
+    id: UUID
+    title: str
+    user_id: UUID
+    workflow_id:UUID
+    class Config:
+        from_attributes = True
+
+class workflowBase(BaseModel):
+    title: str = Field(..., min_length=1, description="Title is required")
+    trigger: TriggerTypeEnum
+
+
+class nodeBase(BaseModel):
+    title: str = Field(..., min_length=1, description="Title is required")
+    workflow_id:str 
+    trigger: TriggerTypeEnum
+
+
 
 
 class FastApiResponseWrapper(BaseModel, Generic[T]):
