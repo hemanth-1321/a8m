@@ -58,13 +58,6 @@ export default function ProviderNode({ id, data, deleteNode }: any) {
       {/* Form node details */}
       {isFormNode && nodeData?.fields && (
         <div className="mt-2">
-          <button
-            onClick={() => setShowDetails(!showDetails)}
-            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-          >
-            {showDetails ? "Hide" : "Show"} Fields ({nodeData.fields.length})
-          </button>
-
           {showDetails && (
             <div className="mt-2 p-2 bg-blue-50 rounded-md border border-blue-200">
               <div className="text-xs text-gray-600 font-medium mb-1">

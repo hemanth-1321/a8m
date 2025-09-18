@@ -14,3 +14,4 @@ class Http:
     StatusInsufficientStorage = 507
     StatusLoopDetected = 508
     StatusNotExtended = 510
+    StatusUnauthorized = 401

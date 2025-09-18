@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { BACKEND_URL } from "@/lib/config";
+import { useAuthStore } from "@/store/authStore";
 import {
   ReactFlow,
   applyNodeChanges,
@@ -9,102 +10,142 @@ import {
   Background,
   Node,
   Edge,
+  NodeChange,
+  EdgeChange,
+  Connection,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
+import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { v4 as uuidv4 } from "uuid";
+import { Button } from "@/components/ui/button";
 import Sidebar from "@/components/Slidebar";
 import ProviderNode from "@/components/ProviderNode";
-import { BACKEND_URL, TOKEN } from "@/lib/config";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { v4 as uuidv4 } from "uuid";
-import { useAuthStore } from "@/store/authStore";
+import { Play } from "lucide-react";
 
 interface NodeData {
-  name: string;
+  name?: string;
   icon?: string;
   color?: string;
-  trigger?: "Manual" | "Cron" | "WebHook";
+  trigger?: "Manual" | "Cron" | "Webhook";
   enabled?: boolean;
   [key: string]: any;
 }
 
-export default function Page() {
+interface RawNode {
+  id: string;
+  title: string;
+  workflowId: string;
+  trigger: "Manual" | "Cron" | "Webhook";
+  enabled: boolean;
+  data: Record<string, any>;
+  positionX: number;
+  positionY: number;
+  type: string | null;
+}
+
+interface RawEdge {
+  id: string;
+  workflowId: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+}
+
+interface WorkflowResponse {
+  workflow: {
+    id: string;
+    title: string;
+    enabled: boolean;
+    userId: string;
+    trigger: "Manual" | "Cron" | "Webhook";
+    createdAt: string;
+    Node: RawNode[];
+    Edge: RawEdge[];
+  };
+}
+
+const page = () => {
   const { id } = useParams();
   const router = useRouter();
   const { token, loadToken } = useAuthStore();
+  const [executing, setExecuting] = useState(false);
+
+  const [nodes, setNodes] = useState<Node<NodeData>[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
+  const [workflowTitle, setWorkflowTitle] = useState("my workflow");
+  const [workflowEnabled, setWorkflowEnabled] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadToken();
+    const init = async () => {
+      await loadToken();
+      setLoading(false);
+    };
+    init();
   }, [loadToken]);
 
   useEffect(() => {
-    if (token === null) {
+    if (!loading && !token) {
       router.push("/auth");
     }
-  }, [token, router]);
-  const [nodes, setNodes] = useState<Node<NodeData>[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
-  const [workflowTitle, setWorkflowTitle] = useState("My Updated Workflow");
-  const [workflowEnabled, setWorkflowEnabled] = useState(true);
+  }, [loading, token, router]);
 
-  // ReactFlow callbacks
-  const onNodesChange = useCallback(
-    (changes: any) => setNodes((nds) => applyNodeChanges(changes, nds)),
+  const onNodeChange = useCallback(
+    (changes: NodeChange[]) =>
+      setNodes((nds) =>
+        applyNodeChanges(changes, nds).map((node) => ({
+          ...node,
+          data: node.data as NodeData,
+        }))
+      ),
     []
   );
 
   const onEdgesChange = useCallback(
-    (changes: any) => setEdges((eds) => applyEdgeChanges(changes, eds)),
+    (changes: EdgeChange[]) =>
+      setEdges((eds) => applyEdgeChanges(changes, eds)),
     []
   );
 
-  // Modified onConnect to use UUID for new edges
-  const onConnect = useCallback((params: any) => {
-    const newEdge = {
+  const onConnect = useCallback((params: Connection) => {
+    const newEdge: Edge = {
       ...params,
       id: uuidv4(),
     };
     setEdges((eds) => addEdge(newEdge, eds));
   }, []);
 
-  const addNode = (provider: any) => {
-    console.log("inside add node", provider);
+  const addNode = (provider: {
+    data?: Record<string, any>;
+    [key: string]: any;
+  }) => {
     const newId = uuidv4();
-
     const providerData = provider.data || {};
 
-    setNodes((nds) => [
-      ...nds,
-      {
-        id: newId,
-        type: "providerNode",
-        position: {
-          x: 200 + Math.random() * 200,
-          y: 100 + Math.random() * 200,
-        },
-        data: {
-          // keep provider data as-is
-          ...provider,
-          ...providerData,
-          trigger: "Manual",
-          enabled: true,
-        },
+    const newNode: Node<NodeData> = {
+      id: newId,
+      type: "providerNode",
+      position: {
+        x: 200 + Math.random() * 200,
+        y: 200 + Math.random() * 200,
       },
-    ]);
+      data: {
+        ...provider,
+        ...providerData,
+        trigger: "Manual",
+        enabled: true,
+      },
+    };
+    setNodes((nds) => [...nds, newNode]);
   };
 
-  // Delete node
   const deleteNode = useCallback((nodeId: string) => {
     setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-    setEdges((eds) =>
-      eds.filter((e) => e.source !== nodeId && e.target !== nodeId)
-    );
   }, []);
 
-  // Update node data
-  const updateNodeData = (nodeId: string, data: Partial<NodeData>) => {
+  const updateNode = (nodeId: string, data: Partial<NodeData>) => {
     setNodes((nds) =>
       nds.map((n) =>
         n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n
@@ -112,23 +153,59 @@ export default function Page() {
     );
   };
 
-  // Fetch workflow from server
+  const executeWorkflow = async () => {
+    setExecuting(true);
+
+    try {
+      const payload = {
+        data: {
+          // example: send all nodes info
+          nodes: nodes.map((n) => ({
+            id: n.id,
+            name: n.data.name,
+            trigger: n.data.trigger,
+          })),
+        },
+      };
+
+      const response = await axios.post(
+        `${BACKEND_URL}/webhook/${id}`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        toast.success("Workflow execution started!");
+      }
+    } catch (error: any) {
+      console.error("Execution error:", error);
+      toast.error(
+        error?.response?.data?.message || "Failed to execute workflow"
+      );
+    } finally {
+      setExecuting(false); // stop loading
+    }
+  };
+
+  // Fetch workflow and map nodes/edges
   useEffect(() => {
     const fetchWorkflow = async () => {
       try {
-        const response = await axios.get(`${BACKEND_URL}/workflows/${id}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem(TOKEN)}`,
-          },
-        });
+        const response = await axios.get<WorkflowResponse>(
+          `${BACKEND_URL}/workflows/${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-        const wf = response.data.workflow;
+        const workflow = response.data.workflow;
+        setWorkflowTitle(workflow.title);
+        setWorkflowEnabled(workflow.enabled);
 
-        setWorkflowTitle(wf.title);
-        setWorkflowEnabled(wf.enabled);
-
-        // Load nodes
-        const loadedNodes: Node<NodeData>[] = wf.Node.map((n: any) => ({
+        // Map nodes
+        const loadNodes: Node<NodeData>[] = workflow.Node.map((n) => ({
           id: n.id,
           type: "providerNode",
           position: { x: n.positionX, y: n.positionY },
@@ -138,29 +215,23 @@ export default function Page() {
           },
         }));
 
-        // Load edges (ensure they match loaded node IDs)
-        const validNodeIds = new Set(loadedNodes.map((n) => n.id));
-        const loadedEdges: Edge[] = wf.Edge.filter(
-          (e: any) =>
-            validNodeIds.has(e.sourceNodeId) && validNodeIds.has(e.targetNodeId)
-        ).map((e: any) => ({
+        // Map edges
+        const loadEdges: Edge[] = workflow.Edge.map((e) => ({
           id: e.id,
           source: e.sourceNodeId,
           target: e.targetNodeId,
         }));
 
-        setNodes(loadedNodes);
-        setEdges(loadedEdges);
-      } catch (error: any) {
-        console.error("Failed to load workflow:", error.response || error);
-        toast.error("Failed to load workflow!");
+        setNodes(loadNodes);
+        setEdges(loadEdges);
+      } catch (error) {
+        console.error("Failed to fetch workflow:", error);
       }
     };
 
-    if (id) fetchWorkflow();
-  }, [id]);
+    if (token) fetchWorkflow();
+  }, [id, token]);
 
-  // Save workflow
   const saveWorkflow = async () => {
     const payload = {
       title: workflowTitle,
@@ -187,7 +258,7 @@ export default function Page() {
         payload,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem(TOKEN)}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -227,138 +298,151 @@ export default function Page() {
   };
 
   return (
-    <div className="h-screen w-full bg-gradient-to-br from-gray-50 to-white relative overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-gray-50 to-white relative overflow-hidden">
       {/* Background grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]"></div>
-
-      {/* Header */}
-      <div className="relative z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200">
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]">
+        {/*header */}
         <div className="flex items-center justify-between max-w-7xl mx-auto px-6 py-4">
-          {/* Left */}
-          <div className="flex items-center gap-8">
-            <div className="flex flex-col">
-              <h1 className="text-lg font-semibold text-gray-900">
-                Workflow Builder
-              </h1>
-              <p className="text-sm text-gray-500">ID: {id}</p>
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-xs font-medium text-gray-700 mb-1">
-                Workflow Name
-              </label>
-              <input
-                type="text"
-                value={workflowTitle}
-                onChange={(e) => setWorkflowTitle(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm 
-                      focus:outline-none focus:ring-2 focus:ring-purple-500 
-                      focus:border-transparent bg-white"
-                placeholder="Enter workflow name"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 mt-6">
-              <input
-                type="checkbox"
-                id="enabled"
-                checked={workflowEnabled}
-                onChange={(e) => setWorkflowEnabled(e.target.checked)}
-                className="w-4 h-4 text-purple-600 bg-white border-gray-300 rounded focus:ring-purple-500"
-              />
-              <label
-                htmlFor="enabled"
-                className="text-sm font-medium text-gray-700"
-              >
-                Enabled
-              </label>
-            </div>
+          {/* Left: Workflow Name */}
+          <div className="flex flex-col">
+            <label className="scroll-m-20 text-xs font-semibold tracking-tigh ml-2 mb-2">
+              Workflow Name
+            </label>
+            <input
+              type="text"
+              value={workflowTitle}
+              onChange={(e) => setWorkflowTitle(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm 
+                  focus:outline-none focus:ring-2 focus:ring-purple-500 
+                  focus:border-transparent bg-white"
+              placeholder="Enter workflow name"
+            />
           </div>
 
-          {/* Right */}
+          {/* Center: Enabled checkbox */}
+          <div className="flex items-center gap-2"></div>
+
+          {/* Right: Save + Sidebar */}
           <div className="flex items-center gap-6">
             <Button
               onClick={saveWorkflow}
               className="bg-gradient-to-r from-emerald-500 to-teal-600 
-                    hover:from-emerald-600 hover:to-teal-700 text-white 
-                    px-6 py-2 rounded-lg font-medium shadow-lg 
-                    transition-all duration-200 transform hover:scale-105"
+                  hover:from-emerald-600 hover:to-teal-700 text-white 
+                  px-6 py-2 rounded-lg font-medium shadow-lg 
+                  transition-all duration-200 transform hover:scale-105"
             >
               Save Workflow
             </Button>
+            <Button
+              variant="outline"
+              onClick={executeWorkflow}
+              disabled={executing}
+              className={`p-2 rounded-full bg-purple-500 hover:bg-purple-600 text-white shadow-lg flex items-center justify-center cursor-pointer ${
+                executing ? "opacity-70 cursor-not-allowed" : ""
+              }`}
+              title="Execute Workflow"
+            >
+              {executing ? (
+                <svg
+                  className="w-5 h-5 animate-spin text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  ></path>
+                </svg>
+              ) : (
+                <Play className="w-5 h-5" />
+              )}
+            </Button>
+
             <Sidebar onAddNode={addNode} />
           </div>
         </div>
-      </div>
 
-      {/* Main */}
-      <div className="flex h-[calc(100vh-88px)] relative">
-        <div className="flex-1 relative">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            fitView
-            nodeTypes={{
-              providerNode: (props) => (
-                <ProviderNode
-                  {...props}
-                  deleteNode={deleteNode}
-                  updateNodeData={updateNodeData}
-                />
-              ),
-            }}
-            className="bg-transparent"
-          >
-            <Background
-              color="#e5e7eb"
-              gap={20}
-              size={1}
-              style={{ opacity: 0.4 }}
-            />
-          </ReactFlow>
+        {/*Arena */}
+        <div className="flex h-[calc(100vh-88px)] relative">
+          <div className="flex-1 relative">
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodeChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              fitView
+              nodeTypes={{
+                providerNode: (props) => (
+                  <ProviderNode
+                    {...props}
+                    deleteNode={deleteNode}
+                    updateNodeData={updateNode}
+                  />
+                ),
+              }}
+              className="bg-transparent"
+            >
+              <Background
+                color="#e5e7eb"
+                gap={20}
+                size={1}
+                style={{ opacity: 0.4 }}
+              />
+            </ReactFlow>
 
-          {/* Empty state */}
-          {nodes.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <svg
-                    className="w-8 h-8 text-purple-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                    />
-                  </svg>
+            {/* Empty state */}
+            {nodes.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <svg
+                      className="w-8 h-8 text-purple-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Start Building Your Workflow
+                  </h3>
+                  <p className="text-gray-500 max-w-sm">
+                    Drag providers from the sidebar to create your automation
+                    workflow
+                  </p>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Start Building Your Workflow
-                </h3>
-                <p className="text-gray-500 max-w-sm">
-                  Drag providers from the sidebar to create your automation
-                  workflow
-                </p>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Canvas info */}
-          <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-sm border border-gray-200">
-            <div className="flex items-center gap-4 text-xs text-gray-600">
-              <span>Nodes: {nodes.length}</span>
-              <span>Connections: {edges.length}</span>
+            {/* Canvas info */}
+            <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-4 text-xs text-gray-600">
+                <span>Nodes: {nodes.length}</span>
+                <span>Connections: {edges.length}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default page;
