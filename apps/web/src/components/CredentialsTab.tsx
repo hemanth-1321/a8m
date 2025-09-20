@@ -20,21 +20,20 @@ export default function CredentialsTab() {
   const [loading, setLoading] = useState<boolean>(false);
 
   // Load credentials
+  // Load credentials
   const loadCredentials = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem(TOKEN);
-      const response = await axios.get(`${BACKEND_URL}/credentails/get`, {
+      const response = await axios.get(`${BACKEND_URL}/credentials/get`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (response.data) {
-        setCredentials(
-          response.data.credentails ||
-            response.data.credentials ||
-            response.data ||
-            []
-        );
-      }
+
+      // Safely extract the array
+      const creds: Credential[] =
+        response.data?.data || response.data?.response?.data || [];
+
+      setCredentials(creds);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load credentials");

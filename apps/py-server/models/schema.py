@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar, Optional, Dict, Any
+from typing import Generic, TypeVar, Optional, Dict, Any,List
 from pydantic import BaseModel,Field
 from enum import Enum
 from uuid import UUID
@@ -57,10 +57,10 @@ class workflowresponse(BaseModel):
     user_id: UUID
     class Config:
         from_attributes = True  
+        
 class nodeResponse(BaseModel):
     id: UUID
     title: str
-    user_id: UUID
     workflow_id:UUID
     class Config:
         from_attributes = True
@@ -70,14 +70,50 @@ class workflowBase(BaseModel):
     trigger: TriggerTypeEnum
 
 
-class nodeBase(BaseModel):
+class NodeBase(BaseModel):
     title: str = Field(..., min_length=1, description="Title is required")
-    workflow_id:str 
+    workflow_id: UUID
     trigger: TriggerTypeEnum
+    enabled: bool = True
+    data: Optional[dict[str, Any]] = Field(default_factory=dict)
+    position_x: float = 0.0
+    position_y: float = 0.0
+    type: Optional[str] = None 
 
 
+class EdgeRequest(BaseModel):
+    id: UUID
+    source_node_id: UUID
+    target_node_id: UUID
 
+class WorkflowUpdateRequest(BaseModel):
+    title: str
+    enabled: bool
+    nodes: List[NodeBase]
+    edges: List[EdgeRequest]
+    
+class EdgeResponse(EdgeRequest):
+    workflow_id: UUID
 
+    class Config:
+        from_attributes = True
+        
+        
+
+class nodeRequest(BaseModel):
+    workflow_id: str
+        
 class FastApiResponseWrapper(BaseModel, Generic[T]):
     response: ResponseModel
     data: Optional[T] = None
+
+class WorkflowResponse(BaseModel):
+    id: UUID
+    title: str
+    enabled: bool
+    user_id: UUID
+    nodes: List[nodeResponse] = []
+    edges: List[EdgeResponse] = []
+
+    class Config:
+        from_attributes = True   

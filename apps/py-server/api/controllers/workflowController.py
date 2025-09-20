@@ -1,10 +1,13 @@
 from models.response import Http
-from models.schema import workflowBase,ResponseModel,workflowresponse
+from models.schema import workflowBase,ResponseModel,workflowresponse,WorkflowUpdateRequest,WorkflowResponse
 from db.models import User,Workflow
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from db.models import Workflow
-
+from fastapi import  HTTPException
+from uuid import UUID
+from sqlalchemy.orm import joinedload
+from api.controllers.nodeController import update_nodes,update_edges_only
 def create_workflows(db: Session, workflow_data: workflowBase, user_id: str) -> ResponseModel:
     if not user_id:
         return ResponseModel(
@@ -186,8 +189,76 @@ def delete_workflows(db:Session,user_id:str,workflow_id)->ResponseModel:
             message=f"An internal server error occured :{str(e)}",
             data=None
         )
-             
-        
-        
-        
+
+
+def save_workflows(db: Session, user_id: str, workflow_id: UUID, updated_workflow: WorkflowUpdateRequest) -> ResponseModel:
+    if not user_id:
+        return ResponseModel(status=Http.StatusNotFound, message="Unauthorized", data=None)
+    try:
+        workflow = db.query(Workflow).filter(Workflow.id == workflow_id, Workflow.user_id == user_id).first()
+        if not workflow:
+            raise HTTPException(status_code=404, detail="Workflow not found")
+
+        # Update fields
+        workflow.title = updated_workflow.title  # type: ignore
+        workflow.enabled = updated_workflow.enabled  # type: ignore
+
+        # Cast UUID → str before passing
+        update_nodes(db, str(workflow_id), new_nodes=updated_workflow.nodes)
+        update_edges_only(db, str(workflow_id), updated_workflow.edges)
+
+        db.commit()
+        db.refresh(workflow)
+
+        return ResponseModel(
+            status=Http.StatusOk,
+            message="Workflow updated successfully",
+            data=WorkflowResponse.model_validate(workflow)
+        )
+    except SQLAlchemyError as e:
+        db.rollback()
+        return ResponseModel(status=Http.StatusInternalServerError, message=f"Database error: {str(e)}", data=None)
+    except Exception as e:
+        return ResponseModel(status=Http.StatusInternalServerError, message=f"Unexpected error: {str(e)}", data=None)
     
+    
+    
+
+def get_workflow(db: Session, user_id: str, workflow_id: UUID) -> ResponseModel:
+    if not user_id:
+        return ResponseModel(
+            status=Http.StatusNotFound,
+            message="unauthorized",
+            data=None
+        )
+    try:
+        workflow = (
+            db.query(Workflow)
+            .options(joinedload(Workflow.nodes), joinedload(Workflow.edges))
+            .filter(Workflow.id == workflow_id, Workflow.user_id == user_id)
+            .first()
+        )
+
+        if not workflow:
+            return ResponseModel(
+                status=Http.StatusNotFound,
+                message="workflow not found"
+            )
+
+        return ResponseModel(
+            status=Http.StatusOk,
+            message="workflow fetched successfully",
+            data=WorkflowResponse.model_validate(workflow)
+        )
+    except SQLAlchemyError as e:
+        return ResponseModel(
+            status=Http.StatusInternalServerError,
+            message=f"Database error occurred: {str(e)}",
+            data=None
+        )
+    except Exception as e:
+        return ResponseModel(
+            status=Http.StatusInternalServerError,
+            message=f"Unexpected error occurred: {str(e)}",
+            data=None
+        )

@@ -20,7 +20,7 @@ const SignIn = () => {
         email,
         password,
       });
-      setToken(res.data.token);
+      setToken(res.data.data.access_token);
       router.push("/home/workflows");
     } catch (err) {
       console.error(err);

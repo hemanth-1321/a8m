@@ -33,36 +33,35 @@ interface NodeData {
   enabled?: boolean;
   [key: string]: any;
 }
-
 interface RawNode {
   id: string;
   title: string;
-  workflowId: string;
-  trigger: "Manual" | "Cron" | "Webhook";
-  enabled: boolean;
-  data: Record<string, any>;
-  positionX: number;
-  positionY: number;
-  type: string | null;
+  workflow_id: string;
+  trigger?: "Manual" | "Cron" | "Webhook";
+  enabled?: boolean;
+  data?: Record<string, any>;
+  position_x?: number;
+  position_y?: number;
+  type?: string | null;
 }
 
 interface RawEdge {
   id: string;
-  workflowId: string;
-  sourceNodeId: string;
-  targetNodeId: string;
+  workflow_id: string;
+  source_node_id: string;
+  target_node_id: string;
 }
 
 interface WorkflowResponse {
-  workflow: {
+  status: number;
+  message: string;
+  data: {
     id: string;
     title: string;
     enabled: boolean;
-    userId: string;
-    trigger: "Manual" | "Cron" | "Webhook";
-    createdAt: string;
-    Node: RawNode[];
-    Edge: RawEdge[];
+    user_id: string;
+    nodes: RawNode[];
+    edges: RawEdge[];
   };
 }
 
@@ -191,7 +190,6 @@ const page = () => {
     }
   };
 
-  // Fetch workflow and map nodes/edges
   useEffect(() => {
     const fetchWorkflow = async () => {
       try {
@@ -200,26 +198,29 @@ const page = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        const workflow = response.data.workflow;
-        setWorkflowTitle(workflow.title);
-        setWorkflowEnabled(workflow.enabled);
+        const wf = response.data.data; // use .data
+
+        setWorkflowTitle(wf.title);
+        setWorkflowEnabled(wf.enabled);
 
         // Map nodes
-        const loadNodes: Node<NodeData>[] = workflow.Node.map((n) => ({
+        const loadNodes: Node<NodeData>[] = (wf.nodes || []).map((n) => ({
           id: n.id,
           type: "providerNode",
-          position: { x: n.positionX, y: n.positionY },
+          position: { x: n.position_x ?? 200, y: n.position_y ?? 200 },
           data: {
             ...n.data,
             name: n.title,
+            trigger: n.trigger || "Manual",
+            enabled: n.enabled ?? true,
           },
         }));
 
         // Map edges
-        const loadEdges: Edge[] = workflow.Edge.map((e) => ({
+        const loadEdges: Edge[] = (wf.edges || []).map((e) => ({
           id: e.id,
-          source: e.sourceNodeId,
-          target: e.targetNodeId,
+          source: e.source_node_id,
+          target: e.target_node_id,
         }));
 
         setNodes(loadNodes);
@@ -242,16 +243,18 @@ const page = () => {
         trigger: n.data.trigger || "Manual",
         enabled: n.data.enabled !== undefined ? n.data.enabled : true,
         data: n.data,
-        positionX: n.position.x,
-        positionY: n.position.y,
+        position_x: n.position.x,
+        position_y: n.position.y,
+        workflow_id: id,
       })),
       edges: edges.map((e) => ({
         id: e.id,
-        sourceNodeId: e.source,
-        targetNodeId: e.target,
+        source_node_id: e.source,
+        target_node_id: e.target,
+        workflow_id: id,
       })),
     };
-    console.log("payload", payload);
+
     try {
       const response = await axios.post(
         `${BACKEND_URL}/workflows/${id}`,
@@ -264,32 +267,7 @@ const page = () => {
       );
 
       const savedWf = response.data;
-      console.log("response", savedWf);
-      // Replace with DB IDs
-      const syncedNodes: Node<NodeData>[] = savedWf.Node.map((n: any) => ({
-        id: n.id,
-        type: "providerNode",
-        position: { x: n.positionX, y: n.positionY },
-        data: {
-          ...n.data,
-          name: n.title,
-        },
-      }));
-
-      const validNodeIds = new Set(syncedNodes.map((n) => n.id));
-      const syncedEdges: Edge[] = savedWf.Edge.filter(
-        (e: any) =>
-          validNodeIds.has(e.sourceNodeId) && validNodeIds.has(e.targetNodeId)
-      ).map((e: any) => ({
-        id: e.id,
-        source: e.sourceNodeId,
-        target: e.targetNodeId,
-      }));
-
-      setNodes(syncedNodes);
-      setEdges(syncedEdges);
-
-      // console.log("Workflow saved:", savedWf);
+      // ... same logic to sync nodes & edges
       toast.success("Workflow saved successfully!");
     } catch (error: any) {
       console.error("Failed to save workflow:", error.response || error);

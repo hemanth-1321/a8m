@@ -26,6 +26,7 @@ router.post("/create", authMiddleware, async (req, res) => {
         trigger: parsedData.data.trigger,
         workflowId: parsedData.data.workflowId,
         enabled: true,
+        type: "TRIGGER",
       },
     });
 

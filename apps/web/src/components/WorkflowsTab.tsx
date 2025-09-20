@@ -19,25 +19,23 @@ export default function WorkflowsTab() {
   >({});
   const router = useRouter();
 
-  // Load workflows
   const loadWorkflows = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem(TOKEN);
-      const response = await axios.get(`${BACKEND_URL}/workflows`, {
+      const response = await axios.get(`${BACKEND_URL}/workflows/all`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (response.data) {
-        setWorkflows(response.data.workflows);
+      const workflowsData: Workflow[] = response.data.data || [];
+      setWorkflows(workflowsData);
 
-        // Initialize toggle states
-        const toggles: Record<string, boolean> = {};
-        response.data.workflows.forEach(
-          (w: Workflow) => (toggles[w.id] = true)
-        );
-        setWorkflowToggles(toggles);
-      }
+      // Initialize toggle states
+      const toggles: Record<string, boolean> = {};
+      workflowsData.forEach((w: Workflow) => (toggles[w.id] = true));
+      setWorkflowToggles(toggles);
+
+      setError(null); // clear previous errors
     } catch (err) {
       console.error(err);
       setError("Failed to load workflows");

@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.schema import workflowresponse,workflowBase,FastApiResponseWrapper
+from models.schema import workflowresponse,workflowBase,FastApiResponseWrapper,WorkflowUpdateRequest,ResponseModel,WorkflowResponse
 from api.middleware.middleware import auth_middleware
-from api.controllers.workflowController import create_workflows,get_all_workflows,upadate_workflows,delete_workflows
+from api.controllers.workflowController import create_workflows,get_all_workflows,upadate_workflows,delete_workflows,save_workflows,get_workflow
 from uuid import UUID
+from sqlalchemy.orm import joinedload
 WORKFLOW_ROUTES=APIRouter()
 
 
@@ -54,3 +55,30 @@ def delete_workflow(
         response=response,
         data=response.data
     )
+    
+    
+    
+    
+@WORKFLOW_ROUTES.post("/{workflow_id}", response_model=FastApiResponseWrapper[WorkflowResponse])
+def save_workflow(workflow_id: UUID, updated_workflow: WorkflowUpdateRequest, db: Session = Depends(get_db), user: dict = Depends(auth_middleware)):
+   response = save_workflows(
+    db=db,
+    user_id=user["user_id"],
+    workflow_id=workflow_id,
+    updated_workflow=updated_workflow
+)
+   return FastApiResponseWrapper[WorkflowResponse](response=response, data=response.data)
+
+@WORKFLOW_ROUTES.get("/{workflow_id}",response_model=FastApiResponseWrapper[workflowresponse])
+def get_workflow_by_id(
+    workflow_id:UUID,
+    db:Session=Depends(get_db),
+    user:dict=Depends(auth_middleware)
+):
+    user_id=user["user_id"]
+    response = get_workflow(db, user_id=user_id, workflow_id=workflow_id)
+    return FastApiResponseWrapper[WorkflowResponse](
+        response=response,
+        data=response.data
+    )
+    

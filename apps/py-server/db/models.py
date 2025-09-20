@@ -1,5 +1,6 @@
 import uuid
 from sqlalchemy import Column, ForeignKey, String, DateTime, func, JSON, Boolean, Enum, Table, Float
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -97,7 +98,7 @@ class Node(Base):
     title = Column(String, nullable=False)
     enabled = Column(Boolean, default=False)
     trigger = Column(Enum(TriggerType), nullable=False)
-    data = Column(JSON, nullable=False)  # Use JSONB for PostgreSQL if needed
+    data = Column(JSONB, nullable=False) 
     position_x = Column(Float, nullable=False)
     position_y = Column(Float, nullable=False)
     type = Column(Enum(NodeType), nullable=True)
