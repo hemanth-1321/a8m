@@ -123,34 +123,3 @@ def delete_nodes(db:Session,node_id)->ResponseModel:
         
         
     
-    
-### update node used in save_workflow
-def update_nodes(db: Session, workflow_id: str, new_nodes: List[NodeBase]):
-    """Delete old nodes and insert new nodes."""
-    db.query(Node).filter(Node.workflow_id == workflow_id).delete()
-    
-    for node_data in new_nodes:
-        new_node = Node(
-            title=node_data.title,
-            workflow_id=workflow_id,
-            trigger=node_data.trigger,
-            enabled=node_data.enabled,
-            data=node_data.data or {},
-            position_x=node_data.position_x,
-            position_y=node_data.position_y,
-            type=node_data.type,
-        )
-        db.add(new_node)
-        
-        
-def update_edges(db: Session, workflow_id: str, new_edges: List[EdgeRequest]):
-    """Delete old edges and insert new edges."""
-    db.query(Edge).filter(Edge.workflow_id == workflow_id).delete()
-    print("new_edges+",new_edges)
-    for edge_data in new_edges:
-        new_edge = Edge(
-            workflow_id=workflow_id,
-            source_node_id=str(edge_data.source_node_id),
-            target_node_id=str(edge_data.target_node_id),
-        )
-        db.add(new_edge)

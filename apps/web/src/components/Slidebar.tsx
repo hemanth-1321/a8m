@@ -1,330 +1,150 @@
-"use client";
+  "use client";
 
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { toast } from "sonner";
-import { providers } from "@/lib/actionProviders";
+  import {
+    Sheet,
+    SheetContent,
+    SheetTrigger,
+    SheetHeader,
+    SheetTitle,
+  } from "@/components/ui/sheet";
+  import { Button } from "@/components/ui/button";
+  import { Plus } from "lucide-react";
+  import { useState } from "react";
+  import { toast } from "sonner";
+  import { providers } from "@/lib/actionProviders";
+  import FormDialog from "./FormDialog";
+  import WebhookDialog from "./WebhookDialog";
+  import ManualTriggerDialog from "./ManualTriggerDialog";
 
-interface SidebarProps {
-  onAddNode: (node: any) => void;
-}
+  interface SidebarProps {
+    onAddNode: (node: any) => void;
+    nodes?: any[];
+  }
 
-interface FormField {
-  label: string;
-  type: string;
-  key?: string; // Add optional key field
-}
+  export default function Sidebar({ onAddNode, nodes = [] }: SidebarProps) {
+    const [selected, setSelected] = useState<any | null>(null);
+    const [formDialogOpen, setFormDialogOpen] = useState(false);
+    const [webhookDialogOpen, setWebhookDialogOpen] = useState(false);
+    const [manualTriggerDialogOpen, setManualTriggerDialogOpen] = useState(false);
 
-export default function Sidebar({ onAddNode }: SidebarProps) {
-  const [selected, setSelected] = useState<any | null>(null);
-  const [formDialogOpen, setFormDialogOpen] = useState(false);
-  const [formName, setFormName] = useState("");
-  const [fields, setFields] = useState<FormField[]>([]);
-
-  const addField = () => {
-    const newField: FormField = { label: "", type: "text" }; // Default to text type
-    setFields((prev) => [...prev, newField]);
-    console.log("Added field, total fields:", fields.length + 1);
-  };
-
-  const removeField = (idx: number) => {
-    setFields((prev) => {
-      const updated = prev.filter((_, i) => i !== idx);
-      console.log("Removed field", idx, "remaining fields:", updated.length);
-      return updated;
-    });
-  };
-
-  const updateField = (idx: number, key: keyof FormField, value: string) => {
-    setFields((prev) => {
-      const updated = [...prev];
-      updated[idx] = { ...updated[idx], [key]: value };
-
-      // Auto-generate key when label changes
-      if (key === "label" && value.trim()) {
-        updated[idx].key = value
-          .toLowerCase()
-          .replace(/\s+/g, "_")
-          .replace(/[^a-z0-9_]/g, "");
-      }
-
-      console.log("Updated field", idx, key, value, "current fields:", updated);
-      return updated;
-    });
-  };
-
-  const handleAddFormNode = () => {
-    // Better validation
-    if (!formName.trim()) {
-      toast.error("Form name is required");
-      return;
-    }
-
-    if (fields.length === 0) {
-      toast.error("At least one field is required");
-      return;
-    }
-
-    // Validate all fields have required data
-    const invalidFields = fields.filter(
-      (field) => !field.label.trim() || !field.type
-    );
-    if (invalidFields.length > 0) {
-      toast.error("All fields must have a label and type");
-      return;
-    }
-
-    // Process fields with proper keys
-    const processedFields = fields.map((field, index) => ({
-      label: field.label.trim(),
-      type: field.type,
-      key:
-        field.key ||
-        field.label
-          .toLowerCase()
-          .replace(/\s+/g, "_")
-          .replace(/[^a-z0-9_]/g, "") ||
-        `field_${index}`,
-    }));
-
-    const formNode = {
-      id: `form-${Date.now()}`,
-      name: formName.trim(),
-      type: "form-builder",
-      icon: "FileText",
-      color: "from-blue-500 to-indigo-600",
-      data: {
-        form_name: formName.trim(),
-        fields: processedFields,
-      },
+    const handleAddNode = (node: any) => {
+      onAddNode(node);
+      toast.success(`${node.name} node added successfully!`);
     };
 
-    // console.log("Creating form node:", formNode);
-
-    onAddNode(formNode);
-    toast.success(
-      `Form "${formName}" added with ${processedFields.length} fields!`
+    // Separate trigger types from other providers
+    const triggerTypes = providers.filter((p) =>
+      ["manual-trigger", "form", "webhook"].includes(p.id)
+    );
+    const otherProviders = providers.filter(
+      (p) => !["manual-trigger", "form", "webhook"].includes(p.id)
     );
 
-    // Reset form
-    resetForm();
-  };
+    const renderProviderButton = (provider: any) => {
+      if (provider.id === "form") {
+        return (
+          <FormDialog
+            key={provider.id}
+            provider={provider}
+            open={formDialogOpen}
+            onOpenChange={setFormDialogOpen}
+            onAddNode={handleAddNode}
+          />
+        );
+      }
 
-  const resetForm = () => {
-    setFormDialogOpen(false);
-    setFormName("");
-    setFields([]);
-  };
+      if (provider.id === "webhook") {
+        return (
+          <WebhookDialog
+            key={provider.id}
+            provider={provider}
+            open={webhookDialogOpen}
+            onOpenChange={setWebhookDialogOpen}
+            onAddNode={handleAddNode}
+          />
+        );
+      }
 
-  // Debug: Log current state
-  // console.log("Current form state:", {
-  //   formName,
-  //   fieldsCount: fields.length,
-  //   fields,
-  // });
+      if (provider.id === "manual-trigger") {
+        return (
+          <ManualTriggerDialog
+            key={provider.id}
+            provider={provider}
+            open={manualTriggerDialogOpen}
+            onOpenChange={setManualTriggerDialogOpen}
+            onAddNode={handleAddNode}
+          />
+        );
+      }
 
-  return (
-    <Sheet>
-      <SheetTrigger asChild>
+      return (
         <Button
-          variant="default"
-          size="icon"
-          style={{ position: "absolute", top: 10, right: 10, zIndex: 20 }}
+          key={provider.id}
+          variant="outline"
+          className="justify-start gap-2 w-full"
+          onClick={() => setSelected(provider)}
         >
-          <Plus size={40} />
+          <provider.icon className="h-4 w-4" />
+          {provider.name}
         </Button>
-      </SheetTrigger>
+      );
+    };
 
-      <SheetContent side="right" className="w-80">
-        <SheetHeader>
-          <SheetTitle>Add Nodes</SheetTitle>
-        </SheetHeader>
+    return (
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="default" size="icon">
+            <Plus size={40} />
+          </Button>
+        </SheetTrigger>
 
-        <div className="mt-4 flex flex-col gap-2">
-          {/* Providers */}
-          {providers.map((provider) =>
-            provider.id === "form" ? (
-              <Dialog
-                key={provider.id}
-                open={formDialogOpen}
-                onOpenChange={(open) => {
-                  setFormDialogOpen(open);
-                  if (!open) resetForm(); // Reset when dialog closes
-                }}
-              >
-                <DialogTrigger asChild>
+        <SheetContent side="right" className="w-80">
+          <SheetHeader>
+            <SheetTitle>Add Nodes</SheetTitle>
+          </SheetHeader>
+
+          <div className="mt-4 flex flex-col gap-4">
+            {/* Show trigger types only when no nodes exist */}
+            {nodes.length === 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  Trigger Types
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {triggerTypes.map(renderProviderButton)}
+                </div>
+                <hr className="my-4" />
+              </div>
+            )}
+
+            {/* All other providers */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                {nodes.length === 0 ? "Actions" : "Add Nodes"}
+              </h3>
+              <div className="flex flex-col gap-2">
+                {otherProviders.map(renderProviderButton)}
+              </div>
+
+              {/* Add selected provider node */}
+              {selected && (
+                <div className="border-t pt-4 mt-4">
                   <Button
-                    variant="outline"
-                    className="justify-start gap-2 mt-2 border-dashed border-blue-300 text-blue-600 hover:bg-blue-50"
+                    variant="default"
+                    className="w-full"
+                    onClick={() => {
+                      onAddNode(selected);
+                      setSelected(null);
+                      toast.success(`${selected.name} node added!`);
+                    }}
                   >
-                    <provider.icon className="h-4 w-4" />
-                    {provider.name}
+                    Add {selected.name} Node
                   </Button>
-                </DialogTrigger>
-
-                <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Create Form Node</DialogTitle>
-                  </DialogHeader>
-
-                  <div className="space-y-4 mt-2">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-1 block">
-                        Form Name *
-                      </label>
-                      <Input
-                        placeholder="Enter form name (e.g., Contact Form)"
-                        value={formName}
-                        onChange={(e) => setFormName(e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <label className="text-sm font-medium text-gray-700">
-                          Form Fields ({fields.length})
-                        </label>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={addField}
-                          className="text-xs"
-                        >
-                          <Plus className="h-3 w-3 mr-1" /> Add Field
-                        </Button>
-                      </div>
-
-                      {fields.length === 0 ? (
-                        <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-200 rounded-md">
-                          No fields added yet. Click "Add Field" to get started.
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {fields.map((field, idx) => (
-                            <div
-                              key={idx}
-                              className="p-3 border rounded-md bg-gray-50 space-y-2"
-                            >
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs font-medium text-gray-600">
-                                  Field {idx + 1}
-                                </span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeField(idx)}
-                                  className="h-6 w-6 p-0"
-                                >
-                                  <Trash2 className="h-3 w-3 text-red-500" />
-                                </Button>
-                              </div>
-
-                              <Input
-                                placeholder="Field Label (e.g., Email Address)"
-                                value={field.label}
-                                onChange={(e) =>
-                                  updateField(idx, "label", e.target.value)
-                                }
-                                className="text-sm"
-                              />
-
-                              <select
-                                value={field.type}
-                                onChange={(e) =>
-                                  updateField(idx, "type", e.target.value)
-                                }
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              >
-                                <option value="">Select field type</option>
-                                <option value="text">Text</option>
-                                <option value="email">Email</option>
-                                <option value="number">Number</option>
-                                <option value="tel">Phone</option>
-                                <option value="password">Password</option>
-                                <option value="textarea">Textarea</option>
-                                <option value="select">Select Dropdown</option>
-                                <option value="checkbox">Checkbox</option>
-                                <option value="radio">Radio Button</option>
-                                <option value="date">Date</option>
-                                <option value="time">Time</option>
-                              </select>
-
-                              {field.label && (
-                                <div className="text-xs text-gray-500">
-                                  Key:{" "}
-                                  {field.key ||
-                                    field.label
-                                      .toLowerCase()
-                                      .replace(/\s+/g, "_")
-                                      .replace(/[^a-z0-9_]/g, "")}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <DialogFooter>
-                    <Button variant="outline" onClick={resetForm}>
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleAddFormNode}
-                      className="bg-blue-600 hover:bg-blue-700"
-                      disabled={!formName.trim() || fields.length === 0}
-                    >
-                      Save & Add Node ({fields.length} fields)
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            ) : (
-              <Button
-                key={provider.id}
-                variant="outline"
-                className="justify-start gap-2"
-                onClick={() => setSelected(provider)}
-              >
-                <provider.icon className="h-4 w-4" />
-                {provider.name}
-              </Button>
-            )
-          )}
-
-          {/* Add selected non-form provider node */}
-          {selected && (
-            <Button
-              variant="default"
-              className="mt-4"
-              onClick={() => {
-                onAddNode(selected);
-                setSelected(null);
-              }}
-            >
-              Add Node
-            </Button>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
+                </div>
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }

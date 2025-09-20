@@ -46,7 +46,7 @@ export default function CredentialsTab() {
   const deleteCredential = async (credentialId: string) => {
     try {
       const token = localStorage.getItem(TOKEN);
-      await axios.delete(`${BACKEND_URL}/credentails/delete/${credentialId}`, {
+      await axios.delete(`${BACKEND_URL}/credentials/${credentialId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -132,7 +132,7 @@ export default function CredentialsTab() {
                     variant="ghost"
                     size="sm"
                     onClick={() => deleteCredential(credential.id)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

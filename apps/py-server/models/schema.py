@@ -67,7 +67,7 @@ class nodeResponse(BaseModel):
 
 class workflowBase(BaseModel):
     title: str = Field(..., min_length=1, description="Title is required")
-    trigger: TriggerTypeEnum
+    # trigger: TriggerTypeEnum
 
 
 class NodeBase(BaseModel):

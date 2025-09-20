@@ -4,11 +4,10 @@ from db.models import User,Workflow
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from db.models import Workflow,Node,Edge
-from fastapi import  HTTPException
 from uuid import UUID
 from sqlalchemy.orm import joinedload
 import uuid
-from api.controllers.nodeController import update_nodes,update_edges
+
 def create_workflows(db: Session, workflow_data: workflowBase, user_id: str) -> ResponseModel:
     if not user_id:
         return ResponseModel(
@@ -28,7 +27,7 @@ def create_workflows(db: Session, workflow_data: workflowBase, user_id: str) -> 
         new_workflow = Workflow(
             title=workflow_data.title,
             enabled=True,
-            trigger=workflow_data.trigger,
+            trigger="Manual",
             user_id=user_id
         )
         

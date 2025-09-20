@@ -57,7 +57,7 @@ export default function AddCredentialsDialog({ onCredentialsAdded }: Props) {
       if (!token) throw new Error("No authentication token found");
 
       await axios.post(
-        `${BACKEND_URL}/credentails/create`,
+        `${BACKEND_URL}/credentials/create`,
         {
           name: provider.name.toLowerCase(),
           type: provider.type,

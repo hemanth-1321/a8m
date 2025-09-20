@@ -6,7 +6,7 @@ from models.response import Http
 from uuid import UUID
 
 def create_credentials(db: Session, credentials_data: CredentialsBase) -> ResponseModel:
-    if not create_credentials.data.user_id:
+    if not credentials_data.user_id:
          return ResponseModel(
             status=Http.StatusNotFound,
             message="UnAuthorized",

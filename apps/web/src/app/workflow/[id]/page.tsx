@@ -31,8 +31,11 @@ interface NodeData {
   color?: string;
   trigger?: "Manual" | "Cron" | "Webhook";
   enabled?: boolean;
+  type?: string; // Add type to store provider type
+  id?: string; // Add provider id
   [key: string]: any;
 }
+
 interface RawNode {
   id: string;
   title: string;
@@ -43,6 +46,7 @@ interface RawNode {
   position_x?: number;
   position_y?: number;
   type?: string | null;
+  provider_type?: string; // Add provider_type for backend
 }
 
 interface RawEdge {
@@ -76,6 +80,8 @@ const page = () => {
   const [workflowTitle, setWorkflowTitle] = useState("my workflow");
   const [workflowEnabled, setWorkflowEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [saveWorkflowLoading, setSaveWorkflowLoading] = useState(false);
+  const [workflowLoaidng, setWorkFlowLoading] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -109,35 +115,37 @@ const page = () => {
   );
 
   const onConnect = useCallback((params: Connection) => {
+    if (!params.source || !params.target) return;
+
     const newEdge: Edge = {
-      ...params,
       id: uuidv4(),
+      source: params.source,
+      target: params.target,
     };
+
     setEdges((eds) => addEdge(newEdge, eds));
   }, []);
 
-  const addNode = (provider: {
-    data?: Record<string, any>;
-    [key: string]: any;
-  }) => {
+  const addNode = (provider: any) => {
     const newId = uuidv4();
     const providerData = provider.data || {};
 
     const newNode: Node<NodeData> = {
       id: newId,
       type: "providerNode",
-      position: {
-        x: 200 + Math.random() * 200,
-        y: 200 + Math.random() * 200,
-      },
+      position: { x: 200 + Math.random() * 200, y: 200 + Math.random() * 200 },
       data: {
         ...provider,
         ...providerData,
         trigger: "Manual",
         enabled: true,
+        type: provider.type || provider.id, // Store provider type/id
+        id: provider.id, // Store provider id
       },
     };
+
     setNodes((nds) => [...nds, newNode]);
+    return newId;
   };
 
   const deleteNode = useCallback((nodeId: string) => {
@@ -158,11 +166,11 @@ const page = () => {
     try {
       const payload = {
         data: {
-          // example: send all nodes info
           nodes: nodes.map((n) => ({
             id: n.id,
             name: n.data.name,
             trigger: n.data.trigger,
+            type: n.data.type || n.data.id,
           })),
         },
       };
@@ -186,24 +194,24 @@ const page = () => {
         error?.response?.data?.message || "Failed to execute workflow"
       );
     } finally {
-      setExecuting(false); // stop loading
+      setExecuting(false);
     }
   };
 
   useEffect(() => {
     const fetchWorkflow = async () => {
       try {
+        setWorkFlowLoading(true);
         const response = await axios.get<WorkflowResponse>(
           `${BACKEND_URL}/workflows/${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        const wf = response.data.data; // use .data
+        const wf = response.data.data;
 
         setWorkflowTitle(wf.title);
         setWorkflowEnabled(wf.enabled);
 
-        // Map nodes
         const loadNodes: Node<NodeData>[] = (wf.nodes || []).map((n) => ({
           id: n.id,
           type: "providerNode",
@@ -213,10 +221,11 @@ const page = () => {
             name: n.title,
             trigger: n.trigger || "Manual",
             enabled: n.enabled ?? true,
+            type: n.type || n.provider_type, // Load provider type
+            id: n.provider_type, // Load provider id
           },
         }));
 
-        // Map edges
         const loadEdges: Edge[] = (wf.edges || []).map((e) => ({
           id: e.id,
           source: e.source_node_id,
@@ -225,7 +234,11 @@ const page = () => {
 
         setNodes(loadNodes);
         setEdges(loadEdges);
+
+        setWorkFlowLoading(false);
       } catch (error) {
+        setWorkFlowLoading(false);
+        toast.error("failed to fetch workflows");
         console.error("Failed to fetch workflow:", error);
       }
     };
@@ -234,6 +247,27 @@ const page = () => {
   }, [id, token]);
 
   const saveWorkflow = async () => {
+    setSaveWorkflowLoading(true);
+
+    const currentNodeIds = new Set(nodes.map((n) => n.id));
+
+    const validEdges = edges.filter((edge) => {
+      const hasValidSource = currentNodeIds.has(edge.source);
+      const hasValidTarget = currentNodeIds.has(edge.target);
+
+      if (!hasValidSource || !hasValidTarget) {
+        console.warn(`Filtering out invalid edge:`, {
+          edgeId: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceExists: hasValidSource,
+          targetExists: hasValidTarget,
+        });
+      }
+
+      return hasValidSource && hasValidTarget;
+    });
+
     const payload = {
       title: workflowTitle,
       enabled: workflowEnabled,
@@ -241,13 +275,15 @@ const page = () => {
         id: n.id,
         title: n.data.name,
         trigger: n.data.trigger || "Manual",
-        enabled: n.data.enabled !== undefined ? n.data.enabled : true,
+        enabled: n.data.enabled ?? true,
         data: n.data,
         position_x: n.position.x,
         position_y: n.position.y,
         workflow_id: id,
+        type: n.data.type || n.data.id, // Include provider type
+        provider_type: n.data.type || n.data.id, // Include as provider_type for backend
       })),
-      edges: edges.map((e) => ({
+      edges: validEdges.map((e) => ({
         id: e.id,
         source_node_id: e.source,
         target_node_id: e.target,
@@ -255,21 +291,58 @@ const page = () => {
       })),
     };
 
+    console.log("payload", payload);
+    console.log("Saving workflow with:", {
+      nodes: payload.nodes.length,
+      edges: payload.edges.length,
+      nodeTypes: payload.nodes.map((n) => ({
+        name: n.title,
+        type: n.provider_type,
+      })),
+    });
+
     try {
       const response = await axios.post(
         `${BACKEND_URL}/workflows/${id}`,
         payload,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      const savedWf = response.data;
-      // ... same logic to sync nodes & edges
+      const savedWf = response.data.data;
+
+      const syncedNodes: Node<NodeData>[] = savedWf.nodes.map((n: any) => ({
+        id: n.id,
+        type: "providerNode",
+        position: { x: n.position_x, y: n.position_y },
+        data: {
+          ...n.data,
+          name: n.title,
+          type: n.type || n.provider_type,
+          id: n.provider_type,
+        },
+      }));
+
+      const validNodeIds = new Set(syncedNodes.map((n) => n.id));
+      const syncedEdges: Edge[] = savedWf.edges
+        .filter(
+          (e: any) =>
+            validNodeIds.has(e.source_node_id) &&
+            validNodeIds.has(e.target_node_id)
+        )
+        .map((e: any) => ({
+          id: e.id,
+          source: e.source_node_id,
+          target: e.target_node_id,
+        }));
+
+      setNodes(syncedNodes);
+      setEdges(syncedEdges);
+      setSaveWorkflowLoading(false);
       toast.success("Workflow saved successfully!");
     } catch (error: any) {
+      setSaveWorkflowLoading(false);
       console.error("Failed to save workflow:", error.response || error);
       toast.error("Failed to save workflow!");
     }
@@ -277,11 +350,8 @@ const page = () => {
 
   return (
     <div className="h-screen bg-gradient-to-br from-gray-50 to-white relative overflow-hidden">
-      {/* Background grid */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]">
-        {/*header */}
         <div className="flex items-center justify-between max-w-7xl mx-auto px-6 py-4">
-          {/* Left: Workflow Name */}
           <div className="flex flex-col">
             <label className="scroll-m-20 text-xs font-semibold tracking-tigh ml-2 mb-2">
               Workflow Name
@@ -297,10 +367,8 @@ const page = () => {
             />
           </div>
 
-          {/* Center: Enabled checkbox */}
           <div className="flex items-center gap-2"></div>
 
-          {/* Right: Save + Sidebar */}
           <div className="flex items-center gap-6">
             <Button
               onClick={saveWorkflow}
@@ -309,7 +377,7 @@ const page = () => {
                   px-6 py-2 rounded-lg font-medium shadow-lg 
                   transition-all duration-200 transform hover:scale-105"
             >
-              Save Workflow
+              {saveWorkflowLoading ? "saving" : "save workflow"}
             </Button>
             <Button
               variant="outline"
@@ -345,12 +413,14 @@ const page = () => {
                 <Play className="w-5 h-5" />
               )}
             </Button>
-
-            <Sidebar onAddNode={addNode} />
+            {nodes.length > 0 ? (
+              <Sidebar onAddNode={addNode} nodes={nodes} />
+            ) : (
+              <></>
+            )}
           </div>
         </div>
 
-        {/*Arena */}
         <div className="flex h-[calc(100vh-88px)] relative">
           <div className="flex-1 relative">
             <ReactFlow
@@ -379,37 +449,12 @@ const page = () => {
               />
             </ReactFlow>
 
-            {/* Empty state */}
             {nodes.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <svg
-                      className="w-8 h-8 text-purple-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Start Building Your Workflow
-                  </h3>
-                  <p className="text-gray-500 max-w-sm">
-                    Drag providers from the sidebar to create your automation
-                    workflow
-                  </p>
-                </div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Sidebar onAddNode={addNode} nodes={nodes} />
               </div>
             )}
 
-            {/* Canvas info */}
             <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-sm border border-gray-200">
               <div className="flex items-center gap-4 text-xs text-gray-600">
                 <span>Nodes: {nodes.length}</span>

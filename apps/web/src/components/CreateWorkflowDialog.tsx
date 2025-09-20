@@ -14,53 +14,22 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Loader2, Zap, Clock, Webhook, Hand } from "lucide-react";
+import { Plus, Loader2, Zap } from "lucide-react";
 
 interface Props {
   onCreated: () => void; // callback to reload workflows
 }
 
-const triggerOptions = [
-  {
-    value: "Manual",
-    label: "Manual",
-    description: "Trigger manually when needed",
-    icon: Hand,
-  },
-  {
-    value: "Cron",
-    label: "Scheduled",
-    description: "Run on a schedule",
-    icon: Clock,
-  },
-  {
-    value: "Webhook",
-    label: "Webhook",
-    description: "Trigger via HTTP webhook",
-    icon: Webhook,
-  },
-];
-
 export default function CreateWorkflowDialog({ onCreated }: Props) {
   const [title, setTitle] = useState("");
-  const [trigger, setTrigger] = useState("");
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
   const handleDialogClose = (isOpen: boolean) => {
     setOpen(isOpen);
     if (!isOpen) {
-      // Reset form when dialog closes
-      setTitle("");
-      setTrigger("");
+      setTitle(""); // reset form when dialog closes
     }
   };
 
@@ -70,17 +39,12 @@ export default function CreateWorkflowDialog({ onCreated }: Props) {
       return;
     }
 
-    if (!trigger) {
-      toast.error("Please select a trigger type");
-      return;
-    }
-
     setLoading(true);
     try {
       const token = localStorage.getItem(TOKEN);
       const response = await axios.post(
         `${BACKEND_URL}/workflows/create`,
-        { title: title.trim(), trigger },
+        { title: title.trim() }, // ✅ only sending title
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -88,11 +52,8 @@ export default function CreateWorkflowDialog({ onCreated }: Props) {
         }
       );
 
-      // Check if response is successful (200-299 status code)
       if (response.status >= 200 && response.status < 300) {
-        // Reset form and close dialog
         setTitle("");
-        setTrigger("");
         setOpen(false);
 
         toast.success("Workflow created successfully!", {
@@ -100,8 +61,7 @@ export default function CreateWorkflowDialog({ onCreated }: Props) {
           duration: 4000,
         });
 
-        // Call the callback to refresh workflows in parent component
-        onCreated();
+        onCreated(); // refresh workflows
       }
     } catch (err: any) {
       console.error("Error creating workflow:", err);
@@ -115,10 +75,6 @@ export default function CreateWorkflowDialog({ onCreated }: Props) {
       setLoading(false);
     }
   };
-
-  const selectedTrigger = triggerOptions.find(
-    (option) => option.value === trigger
-  );
 
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
@@ -160,55 +116,6 @@ export default function CreateWorkflowDialog({ onCreated }: Props) {
               disabled={loading}
             />
           </div>
-
-          {/* Trigger Selection */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-slate-700">
-              Trigger Type
-            </Label>
-            <Select
-              value={trigger}
-              onValueChange={setTrigger}
-              disabled={loading}
-            >
-              <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-slate-500 focus:border-slate-500">
-                <SelectValue placeholder="Choose how to trigger this workflow">
-                  {selectedTrigger && (
-                    <div className="flex items-center space-x-2">
-                      <selectedTrigger.icon className="h-4 w-4 text-slate-500" />
-                      <span>{selectedTrigger.label}</span>
-                    </div>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {triggerOptions.map((option) => (
-                  <SelectItem
-                    key={option.value}
-                    value={option.value}
-                    className="cursor-pointer focus:bg-slate-50"
-                  >
-                    <div className="flex items-center space-x-3 py-2">
-                      <option.icon className="h-4 w-4 text-slate-500" />
-                      <div className="flex flex-col">
-                        <span className="font-medium">{option.label}</span>
-                        <span className="text-xs text-slate-500">
-                          {option.description}
-                        </span>
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Trigger description */}
-            {selectedTrigger && (
-              <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded-md">
-                {selectedTrigger.description}
-              </p>
-            )}
-          </div>
         </div>
 
         <DialogFooter className="flex space-x-3 pt-6 border-t border-slate-100">
@@ -222,7 +129,7 @@ export default function CreateWorkflowDialog({ onCreated }: Props) {
           </Button>
           <Button
             onClick={handleCreate}
-            disabled={loading || !title.trim() || !trigger}
+            disabled={loading || !title.trim()}
             className="flex-1 bg-slate-900 hover:bg-slate-800 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (

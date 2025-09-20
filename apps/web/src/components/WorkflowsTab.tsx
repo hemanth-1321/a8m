@@ -59,7 +59,7 @@ export default function WorkflowsTab() {
     setLoading(true);
 
     try {
-      await axios.delete(`${BACKEND_URL}/workflows/${id}`, {
+      await axios.delete(`${BACKEND_URL}/workflows/delete/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
