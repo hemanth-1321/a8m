@@ -125,69 +125,32 @@ def delete_nodes(db:Session,node_id)->ResponseModel:
     
     
 ### update node used in save_workflow
-
-def update_nodes(db:Session,workflow_id:str,new_nodes:List[NodeBase]):
-    """Update existing nodes"""
-    existing_node=db.query(Node).filter(Node.workflow_id==workflow_id).all()
-    existing_by_id = {}
-    for node in existing_node:
-        node_id_str=str(node.id)
-        existing_by_id[node_id_str]=node
-    
+def update_nodes(db: Session, workflow_id: str, new_nodes: List[NodeBase]):
+    """Delete old nodes and insert new nodes."""
+    db.query(Node).filter(Node.workflow_id == workflow_id).delete()
     
     for node_data in new_nodes:
-        node_id=getattr(node_data,'id',None)
-        node_id_str=str(node_id) if node_id else None
+        new_node = Node(
+            title=node_data.title,
+            workflow_id=workflow_id,
+            trigger=node_data.trigger,
+            enabled=node_data.enabled,
+            data=node_data.data or {},
+            position_x=node_data.position_x,
+            position_y=node_data.position_y,
+            type=node_data.type,
+        )
+        db.add(new_node)
         
-        if node_id_str and node_id_str in existing_by_id:
-            existing_node=existing_by_id[node_id_str]
-
-            if existing_node.title!=node_data.title:
-                existing_node.title=node_data.title
-            if existing_node.trigger!=node_data.trigger:
-                existing_node.trigger=node_data.trigger
-            if existing_node.enabled!=node_data.enabled:
-                existing_node.enabled=node_data.enabled
-            if existing_node.data!=node_data.data:
-                existing_node.data=node_data.data or {}
-            if existing_node.position_x != node_data.position_x:
-                existing_node.position_x = node_data.position_x
-            if existing_node.position_y != node_data.position_y:
-                existing_node.position_y = node_data.position_y
-            if node_data.type is not None and existing_node.type != node_data.type:
-                existing_node.type = node_data.type
-        else:
-            new_node=Node (
-                title=node_data.title,
-                workflow_id=workflow_id,
-                trigger=node_data.trigger,
-                enabled=node_data.enabled,
-                data=node_data.data or {},
-                position_x=node_data.position_x,
-                position_y=node_data.position_y,
-                type=node_data.type
-            )
-            db.add(new_node)
-            
-            
-def update_edges_only(db: Session, workflow_id: str, new_edges: List[EdgeRequest]):
-    """Update existing edges or add new ones"""
-    existing_edges = db.query(Edge).filter(Edge.workflow_id == workflow_id).all()
-    existing_by_id = {str(edge.id): edge for edge in existing_edges}
-
+        
+def update_edges(db: Session, workflow_id: str, new_edges: List[EdgeRequest]):
+    """Delete old edges and insert new edges."""
+    db.query(Edge).filter(Edge.workflow_id == workflow_id).delete()
+    print("new_edges+",new_edges)
     for edge_data in new_edges:
-        edge_id_str = str(getattr(edge_data, "id", None))
-        
-        if edge_id_str and edge_id_str in existing_by_id:
-            # Update existing edge
-            existing_edge: Edge = existing_by_id[edge_id_str]
-            setattr(existing_edge, "source_node_id", str(edge_data.source_node_id))
-            setattr(existing_edge, "target_node_id", str(edge_data.target_node_id))
-        else:
-            # Add new edge
-            new_edge = Edge(
-                workflow_id=workflow_id,
-                source_node_id=str(edge_data.source_node_id),
-                target_node_id=str(edge_data.target_node_id)
-            )
-            db.add(new_edge)
+        new_edge = Edge(
+            workflow_id=workflow_id,
+            source_node_id=str(edge_data.source_node_id),
+            target_node_id=str(edge_data.target_node_id),
+        )
+        db.add(new_edge)

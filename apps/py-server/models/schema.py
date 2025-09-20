@@ -59,7 +59,7 @@ class workflowresponse(BaseModel):
         from_attributes = True  
         
 class nodeResponse(BaseModel):
-    id: UUID
+    id: Optional[UUID] = None
     title: str
     workflow_id:UUID
     class Config:
@@ -71,6 +71,7 @@ class workflowBase(BaseModel):
 
 
 class NodeBase(BaseModel):
+    id: Optional[str] = None
     title: str = Field(..., min_length=1, description="Title is required")
     workflow_id: UUID
     trigger: TriggerTypeEnum
@@ -88,7 +89,7 @@ class EdgeRequest(BaseModel):
 
 class WorkflowUpdateRequest(BaseModel):
     title: str
-    enabled: bool
+    enabled:bool
     nodes: List[NodeBase]
     edges: List[EdgeRequest]
     
@@ -107,13 +108,30 @@ class FastApiResponseWrapper(BaseModel, Generic[T]):
     response: ResponseModel
     data: Optional[T] = None
 
+
+
+
+class NodeResponse(BaseModel):
+    id: Optional[UUID] = None
+    title: str
+    workflow_id: UUID
+    position_x: Optional[float] = None
+    position_y: Optional[float] = None
+    enabled: Optional[bool] = True
+    trigger: Optional[str] = "Manual"
+    data: Optional[dict] = None   
+    class Config:
+        from_attributes = True
+
 class WorkflowResponse(BaseModel):
     id: UUID
     title: str
     enabled: bool
     user_id: UUID
-    nodes: List[nodeResponse] = []
+    nodes: List[NodeResponse] = []
     edges: List[EdgeResponse] = []
 
     class Config:
         from_attributes = True   
+
+

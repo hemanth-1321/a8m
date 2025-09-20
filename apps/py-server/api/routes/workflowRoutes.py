@@ -66,19 +66,27 @@ def save_workflow(workflow_id: UUID, updated_workflow: WorkflowUpdateRequest, db
     user_id=user["user_id"],
     workflow_id=workflow_id,
     updated_workflow=updated_workflow
-)
+)   
+   print("updated_workflow",updated_workflow)
+   
    return FastApiResponseWrapper[WorkflowResponse](response=response, data=response.data)
 
-@WORKFLOW_ROUTES.get("/{workflow_id}",response_model=FastApiResponseWrapper[workflowresponse])
+
+
+@WORKFLOW_ROUTES.get(
+    "/{workflow_id}",
+    response_model=FastApiResponseWrapper[WorkflowResponse]
+)
 def get_workflow_by_id(
-    workflow_id:UUID,
-    db:Session=Depends(get_db),
-    user:dict=Depends(auth_middleware)
+    workflow_id: UUID,
+    db: Session = Depends(get_db),
+    user: dict = Depends(auth_middleware)
 ):
-    user_id=user["user_id"]
+    user_id = user["user_id"]
     response = get_workflow(db, user_id=user_id, workflow_id=workflow_id)
+
+    # ensure ResponseWrapper always has correct typing
     return FastApiResponseWrapper[WorkflowResponse](
         response=response,
         data=response.data
     )
-    

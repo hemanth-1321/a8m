@@ -2,9 +2,12 @@ import uuid
 from sqlalchemy import Column, ForeignKey, String, DateTime, func, JSON, Boolean, Enum, Table, Float
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship,Mapped,mapped_column
 from .database import Base
 import enum
+from typing import List
+from datetime import datetime
+
 #alembic revision --autogenerate -m "credentaisl_table"
 class TriggerType(str, enum.Enum):
     WebHook = "WebHook"
@@ -62,30 +65,29 @@ class Credentials(Base):
         secondary=workflow_credentials,
         back_populates="credentials"
     )
-
 class Workflow(Base):
     __tablename__ = "workflows"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    title = Column(String, nullable=False)
-    enabled = Column(Boolean, default=False)
-    trigger = Column(Enum(TriggerType), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    trigger: Mapped[TriggerType] = mapped_column(Enum(TriggerType), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+
     # Relationships
-    user = relationship("User", back_populates="workflows")
-    nodes = relationship(
+    user: Mapped["User"] = relationship("User", back_populates="workflows")
+    nodes: Mapped[List["Node"]] = relationship(
         "Node",
         back_populates="workflow",
         cascade="all, delete-orphan"
     )
-    edges = relationship(
+    edges: Mapped[List["Edge"]] = relationship(
         "Edge",
         back_populates="workflow",
         cascade="all, delete-orphan"
     )
-    credentials = relationship(
+    credentials: Mapped[List["Credentials"]] = relationship(
         "Credentials",
         secondary=workflow_credentials,
         back_populates="workflows"
@@ -94,26 +96,36 @@ class Workflow(Base):
 class Node(Base):
     __tablename__ = "nodes"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    title = Column(String, nullable=False)
-    enabled = Column(Boolean, default=False)
-    trigger = Column(Enum(TriggerType), nullable=False)
-    data = Column(JSONB, nullable=False) 
-    position_x = Column(Float, nullable=False)
-    position_y = Column(Float, nullable=False)
-    type = Column(Enum(NodeType), nullable=True)
-    workflow_id = Column(UUID(as_uuid=True), ForeignKey("workflows.id", ondelete="CASCADE"), nullable=False)
+    # Convert to new style with Mapped[]
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    trigger: Mapped[TriggerType] = mapped_column(Enum(TriggerType), nullable=False)
+    data: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    position_x: Mapped[float] = mapped_column(Float, nullable=False)
+    position_y: Mapped[float] = mapped_column(Float, nullable=False)
+    type: Mapped[NodeType] = mapped_column(Enum(NodeType), nullable=True)
+    workflow_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), 
+        ForeignKey("workflows.id", ondelete="CASCADE"), 
+        nullable=False
+    )
     
     # Relationships
-    workflow = relationship("Workflow", back_populates="nodes")
+    workflow: Mapped["Workflow"] = relationship("Workflow", back_populates="nodes")
 
 class Edge(Base):
     __tablename__ = "edges"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    source_node_id = Column(String, nullable=False)
-    target_node_id = Column(String, nullable=False)
-    workflow_id = Column(UUID(as_uuid=True), ForeignKey("workflows.id", ondelete="CASCADE"), nullable=False)
+    # Convert to new style with Mapped[] and fix UUID types
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_node_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)  # ✅ Changed from String to UUID
+    target_node_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)  # ✅ Changed from String to UUID
+    workflow_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), 
+        ForeignKey("workflows.id", ondelete="CASCADE"), 
+        nullable=False
+    )
     
     # Relationships
-    workflow = relationship("Workflow", back_populates="edges")
+    workflow: Mapped["Workflow"] = relationship("Workflow", back_populates="edges")
