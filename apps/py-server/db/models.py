@@ -15,9 +15,10 @@ class TriggerType(str, enum.Enum):
     Cron = "Cron"
 
 class NodeType(str, enum.Enum):
-    FORM = "FORM"
-    ACTION = "ACTION"
-    TRIGGER = "TRIGGER"
+    FORM = "form-builder"
+    WEBHOOK = "webhook"
+    TRIGGER = "manual-trigger"
+    ACTION="action"
 
 # Many-to-Many relationship table
 workflow_credentials = Table(
