@@ -7,3 +7,5 @@ pydantic
 bcrypt
 pyjwt
 python-dotenv
+Celery
+redis

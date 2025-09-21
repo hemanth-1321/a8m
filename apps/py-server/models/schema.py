@@ -18,7 +18,7 @@ class UserResponse(BaseModel):
 class ResponseModel(BaseModel):
     status: int
     message: str
-    data: Any = None
+    data:Optional[Any] = None
     
 
 class UserTokenResponse(BaseModel):

@@ -1,6 +1,7 @@
 "use client";
 
 import { TOKEN } from "@/lib/config";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -27,14 +28,12 @@ export default function Page() {
         <div className="text-center max-w-4xl mx-auto">
           {/* Logo */}
           <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <span className="text-white font-black text-lg sm:text-xl">
-                A8M
-              </span>
+            <div className="flex items-center gap-2">
+              <img src="/a8m.jpeg" alt="logo" className="h-25 w-auto" />
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 tracking-tight">
+            {/* <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 tracking-tight">
               AutoMate
-            </h1>
+            </h1> */}
           </div>
 
           {/* Hero Text */}

@@ -25,12 +25,7 @@ export const Appbar = () => {
         {/* Logo + Brand */}
         <Link href="/">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
-              <span className="text-white font-black text-sm">A8M</span>
-            </div>
-            <h2 className="text-xl text-gray-800 font-bold tracking-tight">
-              AutoMate
-            </h2>
+            <img src="/a8m.jpeg" alt="logo" className="h-10 w-auto" />
           </div>
         </Link>
 

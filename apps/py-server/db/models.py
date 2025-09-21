@@ -1,5 +1,7 @@
+#alembic revision --autogenerate -m "workflow_executions"
+
 import uuid
-from sqlalchemy import Column, ForeignKey, String, DateTime, func, JSON, Boolean, Enum, Table, Float
+from sqlalchemy import Column, ForeignKey, String, DateTime, func, JSON, Boolean, Enum, Table, Float,Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship,Mapped,mapped_column
@@ -47,6 +49,12 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
+    executions = relationship(   
+        "WorkflowExecution",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    
 
 class Credentials(Base):
     __tablename__ = "credentials"
@@ -66,6 +74,7 @@ class Credentials(Base):
         secondary=workflow_credentials,
         back_populates="credentials"
     )
+    
 class Workflow(Base):
     __tablename__ = "workflows"
     
@@ -75,7 +84,7 @@ class Workflow(Base):
     trigger: Mapped[TriggerType] = mapped_column(Enum(TriggerType), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-
+    status:Mapped[str]=mapped_column(String(50),default="pending",server_default="pending")
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="workflows")
     nodes: Mapped[List["Node"]] = relationship(
@@ -93,7 +102,8 @@ class Workflow(Base):
         secondary=workflow_credentials,
         back_populates="workflows"
     )
-
+    executions = relationship("WorkflowExecution", back_populates="workflow")
+    
 class Node(Base):
     __tablename__ = "nodes"
     
@@ -106,6 +116,7 @@ class Node(Base):
     position_x: Mapped[float] = mapped_column(Float, nullable=False)
     position_y: Mapped[float] = mapped_column(Float, nullable=False)
     type: Mapped[NodeType] = mapped_column(Enum(NodeType), nullable=True)
+    status:Mapped[str]=mapped_column(String(50),default="pending",server_default="pending")
     workflow_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), 
         ForeignKey("workflows.id", ondelete="CASCADE"), 
@@ -120,7 +131,7 @@ class Edge(Base):
     
     # Convert to new style with Mapped[] and fix UUID types
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    source_node_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)  # ✅ Changed from String to UUID
+    source_node_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False) 
     target_node_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)  # ✅ Changed from String to UUID
     workflow_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), 
@@ -130,3 +141,28 @@ class Edge(Base):
     
     # Relationships
     workflow: Mapped["Workflow"] = relationship("Workflow", back_populates="edges")
+    
+class WorkflowExecution(Base):
+    __tablename__ = "workflow_executions" 
+    id=Column(UUID(as_uuid=True),primary_key=True,default=uuid.uuid4)
+    workflow_id=Column(UUID(as_uuid=True),ForeignKey("workflows.id"), nullable=False)
+    user_id=Column(UUID(as_uuid=True),ForeignKey("users.id"),nullable=False)
+    status=Column(String(50),default="pending")
+    input_data = Column(JSON, default={})
+    output_data = Column(JSON, default={})
+    error_message = Column(Text)
+    started_at = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime(timezone=True))
+    workflow = relationship("Workflow", back_populates="executions")
+    user = relationship("User", back_populates="executions")
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    #docker exec -it my-postgres bash
+    #psql -U hemanth -d postgres
