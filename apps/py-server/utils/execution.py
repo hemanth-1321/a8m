@@ -37,7 +37,7 @@ def execution(node_id, workflow_id, initial_data):
             # dynamically call function if exists
             func = NODE_EXECUTION_MAP.get(node_name)
             if func:
-                output_data = func(node, initial_data)
+                output_data = func(node, initial_data,user_id=workflow.user_id)
             else:
                 output_data = {"result": f"No handler for {node_name}"}
 
