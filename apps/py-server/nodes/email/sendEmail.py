@@ -1,30 +1,20 @@
-import os
 import resend
 from celery_app import celery
 from sqlalchemy.orm import Session
 from db.database import get_db
-from db.models import Workflow, Node, Edge, WorkflowExecution,Credentials
 from typing import Dict, Any
 from db.models import Node
 from utils.get_credentails import get_credentials
 
-resend.api_key = os.environ["RESEND_API_KEY"]
 
 def sendEmail(to: str, subject: str, body: str,api_key:str):
-    """
-    Send email using Resend API
-    
-    Args:
-        to (str): Recipient email address
-        subject (str): Email subject
-        body (str): Email body content
-    """
+   
     resend.api_key = api_key
     params: resend.Emails.SendParams = {
         "from": "Automate <noreply@resend.hemanth.buzz>",
         "to": to,
-        "subject": subject,  # Use the passed subject parameter
-        "html": body,        # Use the passed body parameter
+        "subject": subject,  
+        "html": body,        
     }
 
     email = resend.Emails.send(params)
@@ -33,10 +23,6 @@ def sendEmail(to: str, subject: str, body: str,api_key:str):
 
 
 def run_gmail_node(node: Node, input_data: Dict[str, Any],user_id) -> Dict[str, Any]:
-    """
-    node: current Gmail node containing template in node.data
-    input_data: combined outputs from previous nodes
-    """
     db: Session = next(get_db())
     try:
         node = db.query(Node).filter(Node.id == node.id).first()
@@ -56,15 +42,15 @@ def run_gmail_node(node: Node, input_data: Dict[str, Any],user_id) -> Dict[str, 
         # Replace placeholders dynamically
         body_filled = body_template.replace("{{previous_node.name}}", name)
         subject_filled = subject_template.replace("{{previous_node.name}}", name)
-        node.status = "completed"
-        db.commit() 
+        
         credentials = get_credentials(node_id=node.id,cred_name="gmail",user_id=user_id)  
         if not credentials:
             return {"error": "missing resend credentials"}
         api_key = credentials["data"].get("oauth_token")
        
         email_result = sendEmail(to=email_to, subject=subject_filled, body=body_filled,api_key=api_key)
-            
+        node.status = "completed"
+        db.commit() 
         print(f"Sending email to: {email_to}")
         print(f"Subject: {subject_filled}")
         print(f"Body:\n{body_filled}")

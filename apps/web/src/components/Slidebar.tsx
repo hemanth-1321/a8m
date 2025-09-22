@@ -16,18 +16,25 @@ import FormDialog from "./FormDialog";
 import WebhookDialog from "./WebhookDialog";
 import ManualTriggerDialog from "./ManualTriggerDialog";
 import EmailDialog from "./EmailDialog";
+import AiAgentDialog from "./AiAgentDialog";
 
 interface SidebarProps {
   onAddNode: (node: any) => void;
+  onAddEdge?: (edge: any) => void;
   nodes?: any[];
 }
 
-export default function Sidebar({ onAddNode, nodes = [] }: SidebarProps) {
+export default function Sidebar({
+  onAddNode,
+  onAddEdge,
+  nodes = [],
+}: SidebarProps) {
   const [selected, setSelected] = useState<any | null>(null);
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [webhookDialogOpen, setWebhookDialogOpen] = useState(false);
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false); // Fixed: corrected variable name
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [manualTriggerDialogOpen, setManualTriggerDialogOpen] = useState(false);
+  const [aiAgentDialogOpen, setAiAgentDialogOpen] = useState(false);
 
   const handleAddNode = (node: any) => {
     onAddNode(node);
@@ -79,6 +86,18 @@ export default function Sidebar({ onAddNode, nodes = [] }: SidebarProps) {
       );
     }
 
+    if (provider.id === "ai-agent") {
+      return (
+        <AiAgentDialog
+          key={provider.id}
+          provider={provider}
+          open={aiAgentDialogOpen}
+          onOpenChange={setAiAgentDialogOpen}
+          onAddNode={handleAddNode}
+        />
+      );
+    }
+
     if (provider.id === "gmail") {
       return (
         <div key={provider.id}>
@@ -93,13 +112,15 @@ export default function Sidebar({ onAddNode, nodes = [] }: SidebarProps) {
 
           <EmailDialog
             provider={provider}
-            open={emailDialogOpen} // Fixed: now uses the correct variable name
+            open={emailDialogOpen}
             onOpenChange={setEmailDialogOpen}
             onAddNode={handleAddNode}
           />
         </div>
       );
     }
+
+    // ✅ default fallback
     return (
       <Button
         key={provider.id}
@@ -121,12 +142,12 @@ export default function Sidebar({ onAddNode, nodes = [] }: SidebarProps) {
         </Button>
       </SheetTrigger>
 
-      <SheetContent side="right" className="w-80">
+      <SheetContent side="right" className="w-80 sm:w-96">
         <SheetHeader>
           <SheetTitle>Add Nodes</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-4 flex flex-col gap-4">
+        <div className="mt-4 flex flex-col gap-4 h-full overflow-y-auto">
           {/* Show trigger types only when no nodes exist */}
           {nodes.length === 0 && (
             <div className="space-y-3">

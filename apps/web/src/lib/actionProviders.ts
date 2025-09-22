@@ -8,6 +8,7 @@ import {
   FileText,
   Webhook,
   Play,
+  Brain,
 } from "lucide-react";
 
 export const providers = [
@@ -15,7 +16,7 @@ export const providers = [
     id: "openai",
     name: "OpenAI",
     type: "action",
-    icon: Bot,
+    icon: Bot, // Use actual component
     Ai: true,
     color: "from-emerald-500 to-teal-600",
     description: "GPT models and AI services",
@@ -31,6 +32,15 @@ export const providers = [
     fields: [
       { label: "Bot Token", key: "bot_token", placeholder: "xoxb-xxxx" },
     ],
+  },
+  {
+    id: "ai-agent",
+    name: "AI Agent",
+    type: "ai-agent",
+    icon: Brain,
+    color: "from-purple-500 to-pink-600",
+    description: "LLM agent with tool selection",
+    fields: [], // handled by AiAgentDialog
   },
   {
     id: "gmail",
