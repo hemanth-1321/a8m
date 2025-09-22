@@ -312,12 +312,6 @@ def save_workflows(db: Session, user_id: str, workflow_id: UUID, updated_workflo
             data=None
         )
             
-            
-        
-         
-           
-    
-    
 def get_workflow(db: Session, user_id: str, workflow_id: UUID) -> ResponseModel:
     if not user_id:
         return ResponseModel(
@@ -355,5 +349,42 @@ def get_workflow(db: Session, user_id: str, workflow_id: UUID) -> ResponseModel:
         return ResponseModel(
             status=Http.StatusInternalServerError,
             message=f"Unexpected error occurred: {str(e)}",
+            data=None
+        )
+
+
+def form_builder(db: Session, workflow_id: UUID) -> ResponseModel:
+    if not workflow_id:
+        return ResponseModel(
+            status=Http.StatusNotFound,
+            message="Unauthorized",
+            data=None
+        )
+    try:
+        workflow = db.query(Workflow).filter(Workflow.id == workflow_id).first()
+        if not workflow:
+            return ResponseModel(
+                status=Http.StatusNotFound,
+                message="Workflow not found",
+                data=None
+            )
+
+        workflow_schema = WorkflowResponse.model_validate(workflow)
+
+        return ResponseModel(
+            status=Http.StatusOk,
+            message="Credentials fetched successfully",
+            data=workflow_schema
+        )
+    except SQLAlchemyError as e:
+        return ResponseModel(
+            status=Http.StatusInternalServerError,
+            message=f"Database error occurred: {str(e)}",
+            data=None
+        )
+    except Exception as e:
+        return ResponseModel(
+            status=Http.StatusInternalServerError,
+            message=f"An unexpected exception occurred {str(e)}",
             data=None
         )

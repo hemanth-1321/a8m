@@ -15,6 +15,7 @@ import { providers } from "@/lib/actionProviders";
 import FormDialog from "./FormDialog";
 import WebhookDialog from "./WebhookDialog";
 import ManualTriggerDialog from "./ManualTriggerDialog";
+import EmailDialog from "./EmailDialog";
 
 interface SidebarProps {
   onAddNode: (node: any) => void;
@@ -25,6 +26,7 @@ export default function Sidebar({ onAddNode, nodes = [] }: SidebarProps) {
   const [selected, setSelected] = useState<any | null>(null);
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [webhookDialogOpen, setWebhookDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false); // Fixed: corrected variable name
   const [manualTriggerDialogOpen, setManualTriggerDialogOpen] = useState(false);
 
   const handleAddNode = (node: any) => {
@@ -77,6 +79,27 @@ export default function Sidebar({ onAddNode, nodes = [] }: SidebarProps) {
       );
     }
 
+    if (provider.id === "gmail") {
+      return (
+        <div key={provider.id}>
+          <Button
+            variant="outline"
+            className="justify-start gap-2 w-full"
+            onClick={() => setEmailDialogOpen(true)}
+          >
+            <provider.icon className="h-4 w-4" />
+            {provider.name}
+          </Button>
+
+          <EmailDialog
+            provider={provider}
+            open={emailDialogOpen} // Fixed: now uses the correct variable name
+            onOpenChange={setEmailDialogOpen}
+            onAddNode={handleAddNode}
+          />
+        </div>
+      );
+    }
     return (
       <Button
         key={provider.id}

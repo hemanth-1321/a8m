@@ -14,10 +14,8 @@ def webhook_endpoint(
     workflow_id: UUID,
     data: Any = Body(...),
     db: Session = Depends(get_db),
-    user: dict = Depends(auth_middleware),
 ):
-    user_id = user["user_id"]
-    response = webhook_start(db, user_id=user_id, workflow_id=workflow_id, data=data)
+    response = webhook_start(db, workflow_id=workflow_id, data=data)
     return FastApiResponseWrapper(
         response=response,
         data=response.data

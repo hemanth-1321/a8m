@@ -122,4 +122,3 @@ def delete_nodes(db:Session,node_id)->ResponseModel:
         )
         
         
-    

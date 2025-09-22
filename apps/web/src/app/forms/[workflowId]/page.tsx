@@ -13,6 +13,7 @@ interface Field {
   label: string;
   type: string;
   placeholder?: string;
+  key: string;
   options?: string[];
   required?: boolean;
 }
@@ -27,16 +28,27 @@ const Page = () => {
   useEffect(() => {
     const fetchFields = async () => {
       try {
-        const res = await axios.get(`${BACKEND_URL}/webhook/${workflowId}`);
-        const formCred = res.data.credentials?.find(
-          (cred: any) => cred.type === "form-builder"
+        const res = await axios.get(
+          `${BACKEND_URL}/workflows/form/${workflowId}`
         );
-        setFormName(formCred.data.form_name);
-        if (formCred?.data?.fields) {
-          setFields(formCred.data.fields);
+        console.log("response", res.data);
+
+        // Workflow object is in res.data.data
+        const workflow = res.data.data;
+
+        // Find the node that is a form-builder
+        const formNode = workflow.nodes.find(
+          (n: any) => n.data?.type === "form-builder"
+        );
+
+        if (formNode && formNode.data?.data?.fields) {
+          setFormName(formNode.data.data.form_name);
+          setFields(formNode.data.data.fields);
+
+          // Initialize formData
           const initialData: Record<string, any> = {};
-          formCred.data.fields.forEach((f: Field) => {
-            initialData[f.label] = "";
+          formNode.data.data.fields.forEach((f: Field) => {
+            initialData[f.key] = "";
           });
 
           setFormData(initialData);
@@ -63,10 +75,12 @@ const Page = () => {
     setSubmitting(true);
 
     try {
-      await axios.post(`${BACKEND_URL}/webhook/${workflowId}/submit`, {
-        formData,
-        submittedAt: new Date().toISOString(),
-        source: "web-form",
+      await axios.post(`${BACKEND_URL}/webhook/${workflowId}`, {
+        data: {
+          formData,
+          submittedAt: new Date().toISOString(),
+          source: "web-form",
+        },
       });
 
       toast.success("Form submitted successfully!");

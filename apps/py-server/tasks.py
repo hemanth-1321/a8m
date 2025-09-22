@@ -5,14 +5,13 @@ from db.models import WorkflowExecution
 from typing import Dict,Any
 from db.models import Workflow
 from utils.get_execution_order import get_execution_order
-from nodes.test import run_gmail_node,run_openai_node,run_telegram_node
 from utils.execution import execution
-
+#worker
 @celery.task(bind=True, max_retries=5, default_retry_delay=10)
 def process_webhook_task(self, user_id: str, workflow_id: str,initial_data: Dict[str, Any]):
     db:Session=next(get_db())
     try:
-        #  print(f"Processing workflow {workflow_id} for user {user_id} with data {initial_data}")
+        print(f"Processing workflow {workflow_id} for user {user_id} with data {initial_data}")
         
         workflow=db.query(Workflow).filter(Workflow.id==workflow_id).first()
         if not workflow:
@@ -39,22 +38,10 @@ def process_webhook_task(self, user_id: str, workflow_id: str,initial_data: Dict
                 if edge.target_node_id==node_id and edge.source_node_id in node_outputs:
                     input_data.update(node_outputs[edge.source_node_id])
             
-            node_name = node.data.get("name", "").lower()
-            # print("node recieved",node_id,node_name)
-            execution(node_id=node_id,workflow_id=workflow_id)
             
+            output=execution(node_id=node_id,workflow_id=workflow_id,initial_data=input_data)
+            print("output",output)
             
-            
-            if node_name == "gmail":
-                output = run_gmail_node(node, input_data)
-                
-            elif node_name == "openai":
-                output = run_openai_node(node, input_data)
-            elif node_name == "telegram":
-                output = run_telegram_node(node, input_data)
-            else:
-                output = {}
-            # print('output',output)
             node_outputs[node_id] = output
             workflow_execution.output_data.update({str(node_id): output})
             db.commit()

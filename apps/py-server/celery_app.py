@@ -19,3 +19,17 @@ import tasks
 
 
 #celery -A celery_app.celery worker --loglevel=info -Q webhooks
+
+"""
+
+# Terminal 1
+celery -A celery_app worker -Q webhooks -c 5 --loglevel=info
+
+# Terminal 2
+celery -A celery_app worker -Q webhooks -c 5 --loglevel=info
+
+-c 1 → one task at a time per worker
+
+-c 5 → 5 tasks at a time per worker
+
+"""

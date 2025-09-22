@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 from models.schema import workflowresponse,workflowBase,FastApiResponseWrapper,WorkflowUpdateRequest,ResponseModel,WorkflowResponse
 from api.middleware.middleware import auth_middleware
-from api.controllers.workflowController import create_workflows,get_all_workflows,upadate_workflows,delete_workflows,save_workflows,get_workflow
+from api.controllers.workflowController import create_workflows,get_all_workflows,upadate_workflows,delete_workflows,save_workflows,get_workflow,form_builder
 from uuid import UUID
 from sqlalchemy.orm import joinedload
 WORKFLOW_ROUTES=APIRouter()
@@ -90,3 +90,14 @@ def get_workflow_by_id(
         response=response,
         data=response.data
     )
+
+@WORKFLOW_ROUTES.get("/form/{workflow_id}", response_model=FastApiResponseWrapper[WorkflowResponse])
+def get_form_builder(workflow_id: UUID, db: Session = Depends(get_db)):
+    response = form_builder(db, workflow_id)
+
+    return FastApiResponseWrapper[WorkflowResponse](
+        response=response,
+        data=WorkflowResponse.model_validate(response.data) if response.data else None
+    )
+
+    

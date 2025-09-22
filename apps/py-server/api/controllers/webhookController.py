@@ -5,22 +5,25 @@ from models.schema import  ResponseModel
 from uuid import UUID
 from tasks import process_webhook_task  # import the task
 from sqlalchemy.exc import SQLAlchemyError
-def webhook_start(db: Session, user_id: str, workflow_id: UUID, data: dict)->ResponseModel:
-    print(f"Webhook received for user {user_id}, workflow {workflow_id}")
-    
-    if not user_id:
-        return ResponseModel(
-            status=Http.StatusNotFound,
-            message="unauthorized"
-        ) 
+
+def webhook_start(db: Session,  workflow_id: UUID, data: dict)->ResponseModel:
+    print(f"Webhook received for user , workflow {workflow_id}")
+
     try:
-        workflow=db.query(Workflow).filter(Workflow.id==workflow_id,Workflow.user_id==user_id).first()
+        workflow=db.query(Workflow).filter(Workflow.id==workflow_id).first()
+        
         if not workflow:
             return ResponseModel(
                 status=Http.StatusNotFound,
                 message="workflow not found"
             )
-        process_webhook_task.apply_async(args=[user_id, str(workflow_id), data], queue="webhooks")
+        user_id = str(workflow.user_id)
+
+        process_webhook_task.apply_async(
+        args=[user_id, str(workflow_id), data],
+        queue="webhooks"
+        )
+
         workflow.status="running"
         db.commit()
         
