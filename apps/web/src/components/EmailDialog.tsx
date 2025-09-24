@@ -11,7 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -28,6 +29,8 @@ export default function EmailDialog({
   onOpenChange,
   onAddNode,
 }: EmailDialogProps) {
+  const [enableTo, setEnableTo] = useState(false);
+  const [to, setTo] = useState("");
   const [subject, setSubject] = useState("Message from {{previous_node.name}}");
   const [body, setBody] = useState(
     `Hi {{previous_node.name}},\n\nThank you for reaching out.\n\nWe will get back to you soon.\n\nBest,\nYour Team`
@@ -43,7 +46,7 @@ export default function EmailDialog({
       return;
     }
 
-    const emailNode = {
+    const emailNode: any = {
       id: `email-${Date.now()}`,
       name: "Send Email",
       type: "action",
@@ -55,12 +58,18 @@ export default function EmailDialog({
       },
     };
 
+    if (enableTo && to.trim()) {
+      emailNode.data.to = to.trim();
+    }
+
     onAddNode(emailNode);
     resetForm();
   };
 
   const resetForm = () => {
     onOpenChange(false);
+    setEnableTo(false);
+    setTo("");
     setSubject("Message from {{previous_node.name}}");
     setBody(
       `Hi {{previous_node.name}},\n\nThank you for reaching out.\n\nWe will get back to you soon.\n\nBest,\nYour Team`
@@ -91,6 +100,38 @@ export default function EmailDialog({
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
+          {/* Toggle for To field */}
+          <div className="flex items-center justify-between">
+            <Label
+              htmlFor="enableTo"
+              className="text-sm font-medium text-gray-700"
+            >
+              Add "To" Email
+            </Label>
+            <Switch
+              id="enableTo"
+              checked={enableTo}
+              onCheckedChange={setEnableTo}
+            />
+          </div>
+
+          {enableTo && (
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                To
+              </label>
+              <Input
+                type="email"
+                placeholder="recipient@example.com"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Leave empty if you want to use a default or dynamic recipient.
+              </p>
+            </div>
+          )}
+
           <div>
             <label className="text-sm font-medium text-gray-700 mb-1 block">
               Subject *

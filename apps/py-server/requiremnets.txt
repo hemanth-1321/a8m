@@ -10,3 +10,12 @@ python-dotenv
 Celery
 redis
 resend
+langchain-groq
+langchain
+langchain_core
+langchain-community
+ddgs
+langchain-tavily
+langchain_openai
+langchain_google_genai
+langchain-groq

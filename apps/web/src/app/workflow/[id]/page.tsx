@@ -13,6 +13,7 @@ import {
   NodeChange,
   EdgeChange,
   Connection,
+  ConnectionMode,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import axios from "axios";
@@ -21,7 +22,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { Button } from "@/components/ui/button";
-import Sidebar from "@/components/Slidebar";
+import Sidebar from "@/components/Sidebar";
 import ProviderNode from "@/components/ProviderNode";
 import { Play } from "lucide-react";
 
@@ -54,6 +55,8 @@ interface RawEdge {
   workflow_id: string;
   source_node_id: string;
   target_node_id: string;
+  source_handle?: string; // Add handle support
+  target_handle?: string; // Add handle support
 }
 
 interface WorkflowResponse {
@@ -82,6 +85,7 @@ const page = () => {
   const [loading, setLoading] = useState(true);
   const [saveWorkflowLoading, setSaveWorkflowLoading] = useState(false);
   const [workflowLoaidng, setWorkFlowLoading] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -96,6 +100,22 @@ const page = () => {
       router.push("/auth");
     }
   }, [loading, token, router]);
+
+  // Handle escape key to cancel edge creation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && isConnecting) {
+        setIsConnecting(false);
+        // Force re-render to cancel connection
+        setEdges((edges) => [...edges]);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isConnecting]);
 
   const onNodeChange = useCallback(
     (changes: NodeChange[]) =>
@@ -114,17 +134,41 @@ const page = () => {
     []
   );
 
-  const onConnect = useCallback((params: Connection) => {
-    if (!params.source || !params.target) return;
+  // Updated onConnect function with multi-handle support
+  const onConnect = useCallback(
+    (params: Connection) => {
+      if (!params.source || !params.target) return;
 
-    const newEdge: Edge = {
-      id: uuidv4(),
-      source: params.source,
-      target: params.target,
-    };
+      // Create a unique identifier for this connection combination
+      const connectionKey = `${params.source}-${params.sourceHandle || "default"}-${params.target}-${params.targetHandle || "default"}`;
 
-    setEdges((eds) => addEdge(newEdge, eds));
-  }, []);
+      // Check if this exact connection already exists
+      const existingEdge = edges.find((edge) => {
+        const edgeKey = `${edge.source}-${edge.sourceHandle || "default"}-${edge.target}-${edge.targetHandle || "default"}`;
+        return edgeKey === connectionKey;
+      });
+
+      if (existingEdge) {
+        console.log("Connection already exists");
+        return;
+      }
+
+      const newEdge: Edge = {
+        id: uuidv4(), // Use proper UUID for backend compatibility
+        source: params.source,
+        target: params.target,
+        sourceHandle: params.sourceHandle,
+        targetHandle: params.targetHandle,
+        // Optional: Add different styling based on handle
+        style: params.sourceHandle?.includes("source")
+          ? { stroke: "#8B5CF6", strokeWidth: 2 }
+          : { stroke: "#6B7280", strokeWidth: 2 },
+      };
+
+      setEdges((eds) => addEdge(newEdge, eds));
+    },
+    [edges]
+  );
 
   const addNode = (provider: any) => {
     const newId = uuidv4();
@@ -150,6 +194,10 @@ const page = () => {
 
   const deleteNode = useCallback((nodeId: string) => {
     setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    // Also remove edges connected to this node
+    setEdges((eds) =>
+      eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
+    );
   }, []);
 
   const updateNode = (nodeId: string, data: Partial<NodeData>) => {
@@ -171,6 +219,13 @@ const page = () => {
             name: n.data.name,
             trigger: n.data.trigger,
             type: n.data.type || n.data.id,
+          })),
+          edges: edges.map((e) => ({
+            id: e.id,
+            source: e.source,
+            target: e.target,
+            sourceHandle: e.sourceHandle,
+            targetHandle: e.targetHandle,
           })),
         },
       };
@@ -226,10 +281,16 @@ const page = () => {
           },
         }));
 
+        // Updated edge loading with handle support
         const loadEdges: Edge[] = (wf.edges || []).map((e) => ({
           id: e.id,
           source: e.source_node_id,
           target: e.target_node_id,
+          sourceHandle: e.source_handle, // Load handle information
+          targetHandle: e.target_handle, // Load handle information
+          style: e.source_handle?.includes("source")
+            ? { stroke: "#8B5CF6", strokeWidth: 2 }
+            : { stroke: "#6B7280", strokeWidth: 2 },
         }));
 
         setNodes(loadNodes);
@@ -260,6 +321,8 @@ const page = () => {
           edgeId: edge.id,
           source: edge.source,
           target: edge.target,
+          sourceHandle: edge.sourceHandle,
+          targetHandle: edge.targetHandle,
           sourceExists: hasValidSource,
           targetExists: hasValidTarget,
         });
@@ -283,10 +346,13 @@ const page = () => {
         type: n.data.type || n.data.id, // Include provider type
         provider_type: n.data.type || n.data.id, // Include as provider_type for backend
       })),
+      // Updated edges with handle support
       edges: validEdges.map((e) => ({
         id: e.id,
         source_node_id: e.source,
         target_node_id: e.target,
+        source_handle: e.sourceHandle, // Include handle information
+        target_handle: e.targetHandle, // Include handle information
         workflow_id: id,
       })),
     };
@@ -298,6 +364,11 @@ const page = () => {
       nodeTypes: payload.nodes.map((n) => ({
         name: n.title,
         type: n.provider_type,
+      })),
+      edgeHandles: payload.edges.map((e) => ({
+        id: e.id,
+        sourceHandle: e.source_handle,
+        targetHandle: e.target_handle,
       })),
     });
 
@@ -325,6 +396,7 @@ const page = () => {
       }));
 
       const validNodeIds = new Set(syncedNodes.map((n) => n.id));
+      // Updated synced edges with handle support
       const syncedEdges: Edge[] = savedWf.edges
         .filter(
           (e: any) =>
@@ -335,6 +407,11 @@ const page = () => {
           id: e.id,
           source: e.source_node_id,
           target: e.target_node_id,
+          sourceHandle: e.source_handle, // Sync handle information
+          targetHandle: e.target_handle, // Sync handle information
+          style: e.source_handle?.includes("source")
+            ? { stroke: "#8B5CF6", strokeWidth: 2 }
+            : { stroke: "#6B7280", strokeWidth: 2 },
         }));
 
       setNodes(syncedNodes);
@@ -429,6 +506,10 @@ const page = () => {
               onNodesChange={onNodeChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              onConnectStart={() => setIsConnecting(true)} // Track when connection starts
+              onConnectEnd={() => setIsConnecting(false)} // Track when connection ends
+              connectionMode={ConnectionMode.Loose} // Enable multiple connections between same nodes
+              connectionLineStyle={{ stroke: "#8B5CF6", strokeWidth: 2 }} // Style connection line
               fitView
               nodeTypes={{
                 providerNode: (props) => (

@@ -126,32 +126,34 @@ export default function AddCredentialsDialog({ onCredentialsAdded }: Props) {
         {step === "select" ? (
           <div className="py-4">
             <div className="grid grid-cols-2 gap-3">
-              {providers.map((provider) => (
-                <div
-                  key={provider.id}
-                  className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-slate-300"
-                  onClick={() => handleProviderSelect(provider.id)}
-                >
+              {providers
+                .filter((p) => !p.noCredentials) // 🚀 hide providers without credentials
+                .map((provider) => (
                   <div
-                    className={`absolute inset-0 bg-gradient-to-br ${provider.color} opacity-0 group-hover:opacity-5 transition-opacity duration-200`}
-                  />
-                  <div className="relative flex flex-col items-center space-y-3">
+                    key={provider.id}
+                    className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-slate-300"
+                    onClick={() => handleProviderSelect(provider.id)}
+                  >
                     <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${provider.color}`}
-                    >
-                      <provider.icon className="h-6 w-6 text-white" />
-                    </div>
-                    <div className="text-center">
-                      <h3 className="font-semibold text-slate-900">
-                        {provider.name}
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {provider.description}
-                      </p>
+                      className={`absolute inset-0 bg-gradient-to-br ${provider.color} opacity-0 group-hover:opacity-5 transition-opacity duration-200`}
+                    />
+                    <div className="relative flex flex-col items-center space-y-3">
+                      <div
+                        className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${provider.color}`}
+                      >
+                        <provider.icon className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="text-center">
+                        <h3 className="font-semibold text-slate-900">
+                          {provider.name}
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {provider.description}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         ) : (

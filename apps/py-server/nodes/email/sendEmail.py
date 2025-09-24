@@ -23,6 +23,7 @@ def sendEmail(to: str, subject: str, body: str,api_key:str):
 
 
 def run_gmail_node(node: Node, input_data: Dict[str, Any],user_id) -> Dict[str, Any]:
+    print("input data",input_data)
     db: Session = next(get_db())
     try:
         node = db.query(Node).filter(Node.id == node.id).first()

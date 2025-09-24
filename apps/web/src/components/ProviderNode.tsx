@@ -17,36 +17,36 @@ export default function ProviderNode({ id, data, deleteNode }: any) {
   const [hovered, setHovered] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
-  // Check if this is a form node
   const isFormNode = type === "FORM" || nodeData?.form_name;
 
   return (
     <div
-      className="group relative bg-white border-2 border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-3 min-w-[160px] max-w-[250px]"
+      className={`group relative rounded-xl shadow-lg p-4 min-w-[180px] max-w-[260px] transition-all duration-300 cursor-pointer`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        borderColor: isFormNode ? "#3B82F6" : "#E5E7EB",
+        border: `2px solid ${isFormNode ? "#3B82F6" : "#E5E7EB"}`,
         background: isFormNode
           ? "linear-gradient(135deg, #EBF4FF 0%, #FFFFFF 100%)"
           : "#FFFFFF",
       }}
     >
-      <div className="flex items-center gap-2 mb-2">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-2">
         {Icon && (
           <div
-            className={`flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center ${
+            className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
               isFormNode ? "bg-blue-100" : "bg-gray-50"
             }`}
           >
             <Icon
-              size={16}
+              size={18}
               className={isFormNode ? "text-blue-600" : "text-gray-600"}
             />
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <span className="font-medium text-gray-900 text-sm leading-tight block truncate">
+          <span className="font-semibold text-gray-900 text-sm leading-snug block truncate">
             {name}
           </span>
           {isFormNode && (
@@ -55,17 +55,23 @@ export default function ProviderNode({ id, data, deleteNode }: any) {
         </div>
       </div>
 
-      {/* Form node details */}
+      {/* Node Details */}
       {isFormNode && nodeData?.fields && (
         <div className="mt-2">
+          <button
+            onClick={() => setShowDetails((prev) => !prev)}
+            className="text-xs text-blue-500 hover:underline mb-1"
+          >
+            {showDetails ? "Hide fields" : "Show fields"}
+          </button>
           {showDetails && (
-            <div className="mt-2 p-2 bg-blue-50 rounded-md border border-blue-200">
+            <div className="mt-1 p-2 bg-blue-50 rounded-lg border border-blue-200 shadow-inner">
               <div className="text-xs text-gray-600 font-medium mb-1">
                 Fields:
               </div>
               <div className="space-y-1">
                 {nodeData.fields
-                  .slice(0, 3)
+                  .slice(0, 5)
                   .map((field: any, index: number) => (
                     <div
                       key={index}
@@ -79,9 +85,9 @@ export default function ProviderNode({ id, data, deleteNode }: any) {
                       </span>
                     </div>
                   ))}
-                {nodeData.fields.length > 3 && (
+                {nodeData.fields.length > 5 && (
                   <div className="text-xs text-gray-500 italic">
-                    +{nodeData.fields.length - 3} more fields
+                    +{nodeData.fields.length - 5} more fields
                   </div>
                 )}
               </div>
@@ -90,6 +96,7 @@ export default function ProviderNode({ id, data, deleteNode }: any) {
         </div>
       )}
 
+      {/* Delete Button */}
       {hovered && (
         <button
           onClick={() => deleteNode(id)}
@@ -100,16 +107,17 @@ export default function ProviderNode({ id, data, deleteNode }: any) {
         </button>
       )}
 
+      {/* Handles */}
       <Handle
         type="target"
         position={Position.Left}
-        className="w-3 h-3 bg-gray-400 border-2 border-white hover:bg-blue-500 transition-colors"
+        className="w-3 h-3 bg-gray-400 border-2 border-white hover:bg-blue-500 transition-colors rounded-full"
         style={{ left: -6 }}
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="w-3 h-3 bg-gray-400 border-2 border-white hover:bg-blue-500 transition-colors"
+        className="w-3 h-3 bg-gray-400 border-2 border-white hover:bg-blue-500 transition-colors rounded-full"
         style={{ right: -6 }}
       />
     </div>

@@ -7,7 +7,7 @@ from tasks import process_webhook_task  # import the task
 from sqlalchemy.exc import SQLAlchemyError
 
 def webhook_start(db: Session,  workflow_id: UUID, data: dict)->ResponseModel:
-    print(f"Webhook received for user , workflow {workflow_id}")
+    print(f"Webhook received for user , workflow {workflow_id},{data}")
 
     try:
         workflow=db.query(Workflow).filter(Workflow.id==workflow_id).first()

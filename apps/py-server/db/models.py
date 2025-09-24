@@ -10,7 +10,6 @@ import enum
 from typing import List
 from datetime import datetime
 
-#alembic revision --autogenerate -m "credentaisl_table"
 class TriggerType(str, enum.Enum):
     WebHook = "WebHook"
     Manual = "Manual"
@@ -21,6 +20,7 @@ class NodeType(str, enum.Enum):
     WEBHOOK = "webhook"
     TRIGGER = "manual-trigger"
     ACTION="action"
+    TOOL="tool"
 
 # Many-to-Many relationship table
 workflow_credentials = Table(
@@ -38,7 +38,6 @@ class User(Base):
     password = Column(String(225), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Relationships
     credentials = relationship(
         "Credentials",
         back_populates="user",
@@ -63,11 +62,10 @@ class Credentials(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     name = Column(String(50), nullable=False)
-    type = Column(String(50), nullable=False)  # platform
-    data = Column(JSON, nullable=False)  # Use JSONB for PostgreSQL if needed
+    type = Column(String(50), nullable=False)  
+    data = Column(JSON, nullable=False)  
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     
-    # Relationships
     user = relationship("User", back_populates="credentials")
     workflows = relationship(
         "Workflow",
@@ -85,7 +83,6 @@ class Workflow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     status:Mapped[str]=mapped_column(String(50),default="pending",server_default="pending")
-    # Relationships
     user: Mapped["User"] = relationship("User", back_populates="workflows")
     nodes: Mapped[List["Node"]] = relationship(
         "Node",
@@ -107,7 +104,6 @@ class Workflow(Base):
 class Node(Base):
     __tablename__ = "nodes"
     
-    # Convert to new style with Mapped[]
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String, nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -123,13 +119,11 @@ class Node(Base):
         nullable=False
     )
     
-    # Relationships
     workflow: Mapped["Workflow"] = relationship("Workflow", back_populates="nodes")
 
 class Edge(Base):
     __tablename__ = "edges"
     
-    # Convert to new style with Mapped[] and fix UUID types
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     source_node_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False) 
     target_node_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)  # ✅ Changed from String to UUID
@@ -139,7 +133,6 @@ class Edge(Base):
         nullable=False
     )
     
-    # Relationships
     workflow: Mapped["Workflow"] = relationship("Workflow", back_populates="edges")
     
 class WorkflowExecution(Base):
@@ -166,3 +159,6 @@ class WorkflowExecution(Base):
     
     #docker exec -it my-postgres bash
     #psql -U hemanth -d postgres
+    
+   #alembic revision --autogenerate -m "credentaisl_table"
+    

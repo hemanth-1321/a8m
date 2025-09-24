@@ -2,13 +2,16 @@ from db.models import Node, Workflow
 from db.database import get_db
 from sqlalchemy.orm import Session
 
-from nodes.test import  run_openai_node, run_telegram_node  # add more as needed
+from nodes.test import run_telegram_node 
+from nodes.Agents.llms.run_agent_node import run_agent_node
 from nodes.email.sendEmail import run_gmail_node
 NODE_EXECUTION_MAP = {
     "send email": run_gmail_node,
-    "openai": run_openai_node,
+    "agent": run_agent_node,
     "telegram": run_telegram_node,
-    # "slack": run_slack_node, etc.
+    "groq":run_agent_node,
+    "gemini":run_agent_node
+
 }
 def execution(node_id, workflow_id, initial_data):
     print("initial data", initial_data)
@@ -51,8 +54,6 @@ def execution(node_id, workflow_id, initial_data):
             # fallback: pass input forward
             output_data = initial_data
 
-        node.status = "completed"
-        db.commit()
         return output_data
 
     except Exception as exc:

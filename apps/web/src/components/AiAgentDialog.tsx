@@ -11,9 +11,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Brain, Search } from "lucide-react"; // icons
+import { Brain } from "lucide-react";
 
 interface AiAgentDialogProps {
   provider: any;
@@ -30,7 +32,8 @@ export default function AiAgentDialog({
 }: AiAgentDialogProps) {
   const [agentName, setAgentName] = useState("");
   const [selectedLLM, setSelectedLLM] = useState("");
-  const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [enableTools, setEnableTools] = useState(false);
+  const [selectedTool, setSelectedTool] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
 
   const llmProviders = [
@@ -39,13 +42,11 @@ export default function AiAgentDialog({
     { id: "openai", name: "OpenAI" },
   ];
 
-  const toggleTool = (toolId: string) => {
-    setSelectedTools((prev) =>
-      prev.includes(toolId)
-        ? prev.filter((id) => id !== toolId)
-        : [...prev, toolId]
-    );
-  };
+  const availableTools = [
+    { id: "websearch", name: "Web Search" },
+    { id: "webscrape", name: "Web Scrape" },
+    { id: "summarizer", name: "Summarizer" },
+  ];
 
   const handleAddAgentNode = () => {
     if (!agentName.trim()) {
@@ -57,29 +58,34 @@ export default function AiAgentDialog({
       return;
     }
 
-    const agentNode = {
+    const agentNode: any = {
       id: `ai-agent-${Date.now()}`,
       name: agentName.trim(),
-      type: "ai-agent",
+      type: "action",
       icon: Brain,
       color: "from-purple-500 to-pink-600",
       data: {
         agent_name: agentName.trim(),
         llm: selectedLLM,
-        tools: selectedTools,
         prompt: systemPrompt.trim(),
       },
     };
 
+    if (enableTools && selectedTool) {
+      agentNode.data.tools = [selectedTool];
+    }
+
     onAddNode(agentNode);
     resetForm();
+    toast.success(`AI Agent "${agentName.trim()}" created successfully!`);
   };
 
   const resetForm = () => {
     onOpenChange(false);
     setAgentName("");
     setSelectedLLM("");
-    setSelectedTools([]);
+    setEnableTools(false);
+    setSelectedTool("");
     setSystemPrompt("");
   };
 
@@ -103,7 +109,10 @@ export default function AiAgentDialog({
 
       <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create AI Agent</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-purple-600" />
+            Create AI Agent
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
@@ -127,7 +136,7 @@ export default function AiAgentDialog({
             <select
               value={selectedLLM}
               onChange={(e) => setSelectedLLM(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500"
             >
               <option value="">Select LLM</option>
               {llmProviders.map((llm) => (
@@ -138,12 +147,40 @@ export default function AiAgentDialog({
             </select>
           </div>
 
-          {/* Tool Selection */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">
-              Tools (optional)
-            </label>
+          {/* Tools Toggle + Dropdown */}
+          <div className="flex items-center justify-between">
+            <Label
+              htmlFor="enableTools"
+              className="text-sm font-medium text-gray-700"
+            >
+              Add Tools
+            </Label>
+            <Switch
+              id="enableTools"
+              checked={enableTools}
+              onCheckedChange={setEnableTools}
+            />
           </div>
+
+          {enableTools && (
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Choose Tool
+              </label>
+              <select
+                value={selectedTool}
+                onChange={(e) => setSelectedTool(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Select Tool</option>
+                {availableTools.map((tool) => (
+                  <option key={tool.id} value={tool.id}>
+                    {tool.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* System Prompt */}
           <div>
@@ -159,7 +196,7 @@ export default function AiAgentDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2">
           <Button variant="outline" onClick={resetForm}>
             Cancel
           </Button>
@@ -168,7 +205,7 @@ export default function AiAgentDialog({
             className="bg-purple-600 hover:bg-purple-700"
             disabled={!agentName.trim() || !selectedLLM}
           >
-            Save & Add Node
+            Create Agent
           </Button>
         </DialogFooter>
       </DialogContent>
