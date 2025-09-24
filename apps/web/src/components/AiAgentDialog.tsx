@@ -9,7 +9,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -30,7 +29,6 @@ export default function AiAgentDialog({
   onOpenChange,
   onAddNode,
 }: AiAgentDialogProps) {
-  const [agentName, setAgentName] = useState("");
   const [selectedLLM, setSelectedLLM] = useState("");
   const [enableTools, setEnableTools] = useState(false);
   const [selectedTool, setSelectedTool] = useState("");
@@ -49,10 +47,6 @@ export default function AiAgentDialog({
   ];
 
   const handleAddAgentNode = () => {
-    if (!agentName.trim()) {
-      toast.error("Agent name is required");
-      return;
-    }
     if (!selectedLLM) {
       toast.error("Select at least one LLM");
       return;
@@ -60,12 +54,12 @@ export default function AiAgentDialog({
 
     const agentNode: any = {
       id: `ai-agent-${Date.now()}`,
-      name: agentName.trim(),
+      name: "agent",
       type: "action",
       icon: Brain,
       color: "from-purple-500 to-pink-600",
       data: {
-        agent_name: agentName.trim(),
+        agent_name: "agent",
         llm: selectedLLM,
         prompt: systemPrompt.trim(),
       },
@@ -77,12 +71,11 @@ export default function AiAgentDialog({
 
     onAddNode(agentNode);
     resetForm();
-    toast.success(`AI Agent "${agentName.trim()}" created successfully!`);
+    toast.success(`AI Agent "Agent" created successfully!`);
   };
 
   const resetForm = () => {
     onOpenChange(false);
-    setAgentName("");
     setSelectedLLM("");
     setEnableTools(false);
     setSelectedTool("");
@@ -116,18 +109,6 @@ export default function AiAgentDialog({
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
-          {/* Agent Name */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">
-              Agent Name *
-            </label>
-            <Input
-              placeholder="Enter agent name (e.g., Research Bot)"
-              value={agentName}
-              onChange={(e) => setAgentName(e.target.value)}
-            />
-          </div>
-
           {/* LLM Selection */}
           <div>
             <label className="text-sm font-medium text-gray-700 mb-1 block">
@@ -203,7 +184,7 @@ export default function AiAgentDialog({
           <Button
             onClick={handleAddAgentNode}
             className="bg-purple-600 hover:bg-purple-700"
-            disabled={!agentName.trim() || !selectedLLM}
+            disabled={!selectedLLM}
           >
             Create Agent
           </Button>

@@ -31,7 +31,7 @@ def execution(node_id, workflow_id, initial_data):
         node.status = "running"
         db.add(node)
         db.commit()
-
+        print(node.data)
         node_name = (node.title or (node.data or {}).get("name", "unknown")).lower()
         node_type = node.type
         print(f"Executing node {node_id} ({node_name}) type {node_type}")
