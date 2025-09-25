@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 from db.models import WorkflowExecution
 from typing import Dict,Any
-from db.models import Workflow
+from db.models import Workflow,Node
 from utils.get_execution_order import get_execution_order
 from utils.execution import execution
 #worker
@@ -59,3 +59,23 @@ def process_webhook_task(self, user_id: str, workflow_id: str,initial_data: Dict
     except Exception as exc:
         print(f"Error processing workflow {workflow_id}: {exc}, retrying...")
         raise self.retry(exc=exc)
+
+
+
+@celery.task()
+def poll_inbox_task():
+    db:Session=next(get_db())
+    nodes_waiting=db.query(Node).filter(Node.status=="waiting_for_reply").all()
+    
+    for node in nodes_waiting:
+        meta=node.data or {}
+        imap_host = meta.get("imap_host")
+        email_user = meta.get("email_user")
+        email_pass = meta.get("email_pass")
+        reply_token = meta.get("reply_token")
+        mailbox = meta.get("mailbox", "INBOX")
+        
+        if not all([imap_host,email_user,reply_token]):
+            continue
+        
+        # if check_

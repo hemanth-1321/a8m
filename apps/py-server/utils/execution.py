@@ -1,19 +1,19 @@
 from db.models import Node, Workflow
 from db.database import get_db
 from sqlalchemy.orm import Session
-
 from nodes.test import run_telegram_node 
 from nodes.Agents.llms.run_agent_node import run_agent_node
 from nodes.email.sendEmail import run_gmail_node
+
 NODE_EXECUTION_MAP = {
     "send email": run_gmail_node,
     "agent": run_agent_node,
     "telegram": run_telegram_node,
     "groq":run_agent_node,
     "gemini":run_agent_node
-
 }
-def execution(node_id, workflow_id, initial_data):
+
+def execution(node_id, workflow_id, initial_data,wait_for_reply:bool=False):
     print("initial data", initial_data)
     
     db: Session = next(get_db())
@@ -40,22 +40,25 @@ def execution(node_id, workflow_id, initial_data):
             # dynamically call function if exists
             func = NODE_EXECUTION_MAP.get(node_name)
             if func:
-                output_data = func(node, initial_data,user_id=workflow.user_id)
+                if node_name=="send email":
+                    output_data = func(node, initial_data,user_id=workflow.user_id,wait_for_reply=wait_for_reply)
+                else: 
+                    output_data = {"result": f"No handler for {node_name}"}
+                if output_data.get("status")=="waiting_for_reply":
+                    node.status="paused"
+                    db.add(node)
+                    db.commit()
+                    print(f"Node {node.id} is waiting for reply. Workflow paused.")
+                    return output_data
+                    
             else:
                 output_data = {"result": f"No handler for {node_name}"}
-
-        elif node_type and getattr(node_type, "name", None) == "FORM":
-            output_data = {"form_data": initial_data.get("form_data", {})}
-
-        elif node_type and getattr(node_type, "name", None) in ["WEBHOOK", "TRIGGER"]:
-            output_data = {"triggered": True}
-
+                        
         else:
-            # fallback: pass input forward
             output_data = initial_data
 
         return output_data
 
     except Exception as exc:
         print(f"Error processing workflow {workflow_id}: {exc}")
-        return initial_data  # fail-safe
+        return initial_data  

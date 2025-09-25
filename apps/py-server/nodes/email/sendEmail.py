@@ -61,8 +61,7 @@ def generate_email_body_gemini(input_data: dict, user_name: str = "User") -> str
     return str(response.text())
 
 
-def run_gmail_node(node: Node, input_data: Dict[str, Any], user_id) -> Dict[str, Any]:
-    """Run a Gmail node: generate email using Gemini and send with Resend."""
+def run_gmail_node(node: Node, input_data: Dict[str, Any], user_id,wait_for_reply:bool=False) -> Dict[str, Any]:
     print("Input data:", input_data)
     db: Session = next(get_db())
 
@@ -113,8 +112,19 @@ def run_gmail_node(node: Node, input_data: Dict[str, Any], user_id) -> Dict[str,
             return {"error": "Missing API key in credentials"}
 
         email_result = sendEmail(to=email_to, subject=subject, body=body, api_key=api_key)
-
-        node.status = "completed"
+        metadata=node.data or {}
+        if wait_for_reply:
+            reply_token=f"[WF-{node.workflow_id}-N-{node.id}]"
+            metadata.update({
+                "reply_token":reply_token,
+                "imap_host": "imap.gmail.com",
+                "email_user":credentials["data"].get("email"),
+                "email_pass":credentials["data"].get("app_password"),
+                "mailbox":"INBOX"
+            })
+            node.status="waiting_for_reply"
+        else:
+            node.status = "completed"
         db.commit()
 
         print(f"Email sent to: {email_to}")
@@ -122,7 +132,7 @@ def run_gmail_node(node: Node, input_data: Dict[str, Any], user_id) -> Dict[str,
         print(f"Body:\n{body}")
 
         return {
-            "gmail_result": f"sent_{node.id}",
+            "gmail_result": f"{'waiting' if wait_for_reply else 'sent'}_{node.id}",
             "sent_to": email_to,
             "subject": subject,
             "body": body,
