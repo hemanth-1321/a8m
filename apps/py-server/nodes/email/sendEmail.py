@@ -1,12 +1,19 @@
 import resend
+import os
 from celery_app import celery
 from sqlalchemy.orm import Session
 from db.database import get_db
 from typing import Dict, Any
 from db.models import Node
 from utils.get_credentails import get_credentials
+from langchain_google_genai import ChatGoogleGenerativeAI
+from dotenv import load_dotenv
 
+
+load_dotenv()
+GEMINI_API_KEY=os.getenv("GEMINI_KEY")
 def sendEmail(to: str, subject: str, body: str, api_key: str):
+    """Send email using Resend API."""
     resend.api_key = api_key
     
     html_body = body.replace('\n', '<br>')
@@ -37,116 +44,90 @@ def sendEmail(to: str, subject: str, body: str, api_key: str):
     print(f"Email sent: {email}")
     return email
 
+
+def generate_email_body_gemini(input_data: dict, user_name: str = "User") -> str:
+    gemini = ChatGoogleGenerativeAI(model="gemini-2.5-flash", api_key=GEMINI_API_KEY) 
+
+    prompt = f"""
+    You are an AI assistant that writes professional, clear, and friendly emails.
+    Use the following data to write an email for {user_name}:
+
+    {input_data}
+
+    Write the email in a polite, concise, and professional style. Include all relevant information from the data,do not include any errors in the email.
+    """
+
+    response = gemini.invoke([{"role": "user", "content": prompt}])
+    return str(response.text())
+
+
 def run_gmail_node(node: Node, input_data: Dict[str, Any], user_id) -> Dict[str, Any]:
-    print("input data email", input_data)
+    """Run a Gmail node: generate email using Gemini and send with Resend."""
+    print("Input data:", input_data)
     db: Session = next(get_db())
-    
+
     try:
         node = db.query(Node).filter(Node.id == node.id).first()
         if not node:
-            return {"error": "node not found"}
+            return {"error": "Node not found"}
 
+        # Determine recipient
         email_to = None
-        name = "User"  # default name
-        body_content = ""
-        subject_content = "No Subject"
+        user_name = "User"
 
-        if input_data.get("output"):
-            body_content = str(input_data.get("output", ""))
-            
         form_data = input_data.get("data", {}).get("formData", {})
         if form_data:
-            name = form_data.get("name", name)
-            if form_data.get("email"):
-                email_to = form_data.get("email")
-        
-        if not email_to and input_data.get("data"):
-            data = input_data.get("data", {})
-            if data.get("to"):
-                email_to = data.get("to")
-            if data.get("email"):
-                email_to = data.get("email")
-        
-        node_data = node.data or {}
-        
+            user_name = form_data.get("name", user_name)
+            email_to = form_data.get("email", email_to)
+
         if not email_to:
-            email_to = node_data.get("to")
-        
-        # Validate email_to is a string and not empty
+            email_to = (
+                input_data.get("data", {}).get("to") or
+                input_data.get("data", {}).get("email") or
+                input_data.get("to") or
+                input_data.get("email") or
+                (node.data or {}).get("to")
+            )
+
         if not email_to or not isinstance(email_to, str):
-            return {"error": "No valid email recipient found. The 'to' field must be a non-empty string."}
-        
-        # Get email templates from node configuration
-        body_template = node_data.get("body", "")
-        subject_template = node_data.get("subject", "No Subject")
-        
-        
-        
-        # Check if there's specific email content in input data
-        input_body = input_data.get("body") or input_data.get("email_body")
-        
-        if input_body:
-            # Use specific email body from input
-            body_template = input_body
-        elif body_content and len(body_content.strip()) > 0:
-            if body_template and "{{previous_node.output}}" in body_template:
-                pass
-            elif body_template and "Thank you for reaching out" in body_template:
-                body_template = f"Hello,\n\nHere's the information you requested:\n\n{body_content}\n\nBest regards,\nYour Team"
-            else:
-                # Clean up the body content and format it properly
-                clean_content = body_content.replace('***', '• ').replace('**', '').strip()
-                
-                # Create a well-formatted email
-                body_template = f"""Hello,
+            print(f"Debug - email_to: {email_to}")
+            print(f"Debug - input_data: {input_data}")
+            return {"error": "No valid email recipient found."}
 
-Here's the information you requested:
+        subject = (node.data or {}).get("subject", "No Subject")
+        if input_data.get("subject"):
+            subject = input_data.get("subject")
 
-{clean_content}
+        # Generate email body with Gemini AI
+        body = generate_email_body_gemini(input_data, user_name=user_name)
 
-Best regards,
-Your Team"""
-        elif not body_template:
-            body_template = "Default email content"
-        
-        # Replace placeholders dynamically
-        # Replace {{previous_node.name}} with actual name
-        body_filled = body_template.replace("{{previous_node.name}}", name)
-        subject_filled = subject_template.replace("{{previous_node.name}}", name)
-        
-        # Replace {{previous_node.output}} with previous node's output if present
-        if body_content:
-            body_filled = body_filled.replace("{{previous_node.output}}", body_content)
-            subject_filled = subject_filled.replace("{{previous_node.output}}", body_content)
-        
-        # Get credentials
+        body = body.replace("{{previous_node.name}}", user_name)
+        subject = subject.replace("{{previous_node.name}}", user_name)  #type:ignore
+
         credentials = get_credentials(node_id=node.id, cred_name="gmail", user_id=user_id)
-        
         if not credentials:
-            return {"error": "missing resend credentials"}
-        
+            return {"error": "Missing Resend credentials"}
+
         api_key = credentials["data"].get("oauth_token")
         if not api_key:
-            return {"error": "missing API key in credentials"}
-        
-        # Send email
-        email_result = sendEmail(to=email_to, subject=subject_filled, body=body_filled, api_key=api_key)
-        
-        # Update node status
+            return {"error": "Missing API key in credentials"}
+
+        email_result = sendEmail(to=email_to, subject=subject, body=body, api_key=api_key)
+
         node.status = "completed"
         db.commit()
-        
-        print(f"Sending email to: {email_to}")
-        print(f"Subject: {subject_filled}")
-        print(f"Body:\n{body_filled}")
-        
+
+        print(f"Email sent to: {email_to}")
+        print(f"Subject: {subject}")
+        print(f"Body:\n{body}")
+
         return {
             "gmail_result": f"sent_{node.id}",
             "sent_to": email_to,
-            "subject": subject_filled,
-            "body": body_filled,
+            "subject": subject,
+            "body": body,
             "response": email_result
         }
-    
+
     except Exception as e:
         return {"error": str(e)}

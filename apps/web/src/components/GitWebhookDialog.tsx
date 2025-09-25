@@ -28,7 +28,7 @@ export default function GitWebhookDialog({
   onAddNode,
 }: GitWebhookDialogProps) {
   const [workflowId, setWorkflowId] = useState("");
-  const webhookBaseUrl = `${BACKEND_URL}/api/github/workflow`;
+  const webhookBaseUrl = `${BACKEND_URL}/webhook`;
 
   // Extract workflow ID from current URL
   useEffect(() => {
@@ -43,9 +43,8 @@ export default function GitWebhookDialog({
   }, []);
 
   const buildWebhookUrl = () => {
-    const params = new URLSearchParams();
-    if (workflowId) params.append("workflowId", workflowId);
-    return `${webhookBaseUrl}?${params.toString()}`;
+    if (!workflowId) return webhookBaseUrl;
+    return `${webhookBaseUrl}/${workflowId}`;
   };
 
   const handleAddWebhookNode = () => {
