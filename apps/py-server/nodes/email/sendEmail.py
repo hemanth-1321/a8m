@@ -9,7 +9,6 @@ from utils.get_credentails import get_credentials
 from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 
-
 load_dotenv()
 GEMINI_API_KEY=os.getenv("GEMINI_KEY")
 def sendEmail(to: str, subject: str, body: str, api_key: str):
@@ -35,6 +34,7 @@ def sendEmail(to: str, subject: str, body: str, api_key: str):
     params: resend.Emails.SendParams = {
         "from": "Hemanth <noreply@resend.hemanth.buzz>", 
         "to": to,
+        "reply_to":"akdon9936@gmial.com",
         "subject": subject,
         "html": html_content,
         "text": body,  
@@ -70,7 +70,6 @@ def run_gmail_node(node: Node, input_data: Dict[str, Any], user_id,wait_for_repl
         if not node:
             return {"error": "Node not found"}
 
-        # Determine recipient
         email_to = None
         user_name = "User"
 
@@ -113,17 +112,21 @@ def run_gmail_node(node: Node, input_data: Dict[str, Any], user_id,wait_for_repl
 
         email_result = sendEmail(to=email_to, subject=subject, body=body, api_key=api_key)
         metadata=node.data or {}
+        print("wair for rply",wait_for_reply)
         if wait_for_reply:
             reply_token=f"[WF-{node.workflow_id}-N-{node.id}]"
             metadata.update({
                 "reply_token":reply_token,
                 "imap_host": "imap.gmail.com",
                 "email_user":credentials["data"].get("email"),
-                "email_pass":credentials["data"].get("app_password"),
+                "email_pass":credentials["data"].get("appPassword"),
                 "mailbox":"INBOX"
             })
+            print("updated to waiting for rply")
             node.status="waiting_for_reply"
         else:
+            print("updated to complted")
+            
             node.status = "completed"
         db.commit()
 

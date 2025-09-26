@@ -3,7 +3,7 @@ from db.database import get_db
 from db.models import Workflow, Node, Credentials
 from uuid import UUID
 
-def get_credentials(node_id: UUID, cred_name: str, user_id: UUID):
+def get_credentials(node_id: UUID, cred_name: str, user_id: str):
     print("user_id:", user_id)
     db: Session = next(get_db())
     try:

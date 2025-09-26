@@ -2,7 +2,7 @@ from typing import Generic, TypeVar, Optional, Dict, Any,List
 from pydantic import BaseModel,Field
 from enum import Enum
 from uuid import UUID
-
+from db.models import NodeType, TriggerType
 T = TypeVar("T")
 
 class UserModel(BaseModel):
@@ -79,7 +79,7 @@ class NodeBase(BaseModel):
     data: Optional[dict[str, Any]] = Field(default_factory=dict)
     position_x: float = 0.0
     position_y: float = 0.0
-    type: Optional[str] = None 
+    type: NodeType 
 
 
 class EdgeRequest(BaseModel):

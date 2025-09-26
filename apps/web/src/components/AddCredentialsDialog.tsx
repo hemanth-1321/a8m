@@ -97,18 +97,16 @@ export default function AddCredentialsDialog({ onCredentialsAdded }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          className="border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all duration-200"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Credentials
+        <Button className="group relative overflow-hidden bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border-0 text-white">
+          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+          <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
+          <span className="font-medium">Add Credentails</span>
         </Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-lg">
         <DialogHeader className="space-y-3">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full ">
             <Key className="h-6 w-6 text-slate-600" />
           </div>
           <DialogTitle className="text-center text-xl font-semibold text-slate-900">

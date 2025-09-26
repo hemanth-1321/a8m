@@ -10,13 +10,24 @@ celery = Celery(
     backend=CELERY_RESULT_BACKEND,
 )
 
-celery.conf.task_routes = {
-    "tasks.process_webhook_task": {"queue": "webhooks"}
-}
+# Modern way to configure Celery settings
+celery.conf.update(
+    timezone="UTC",
+    enable_utc=True,
+    task_routes={
+        "tasks.poll_inbox_task": {"queue": "emails"},
+        "tasks.process_webhook_task": {"queue": "webhooks"}
+    },
+    beat_schedule={
+        "poll-inbox-every-1-min": {
+            "task": "tasks.poll_inbox_task",
+            "schedule": 30.0, 
+        },
+    }
+)
 
+# Import tasks so Celery discovers them
 import tasks
-
-
 
 #celery -A celery_app.celery worker --loglevel=info -Q webhooks
 

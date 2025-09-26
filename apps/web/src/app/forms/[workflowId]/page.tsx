@@ -102,14 +102,14 @@ const Page = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg">
+    <div className="min-h-screen flex items-center justify-center x-4">
+      <div className=" p-8 rounded-lg shadow-lg w-full max-w-lg">
         <h1 className="text-2xl font-bold text-center mb-6">{formName}</h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {fields.map((field) => (
             <div key={field.label}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium  mb-1">
                 {field.label}
                 {field.required && <span className="text-red-500 ml-1">*</span>}
               </label>
@@ -138,7 +138,7 @@ const Page = () => {
           <Button
             type="submit"
             disabled={submitting}
-            className="w-full cursor-pointer text-white"
+            className="w-full cursor-pointer "
           >
             {submitting ? "Submitting..." : "Submit"}
           </Button>

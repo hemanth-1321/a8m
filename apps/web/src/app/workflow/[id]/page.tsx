@@ -509,7 +509,10 @@ const page = () => {
               onConnectStart={() => setIsConnecting(true)} // Track when connection starts
               onConnectEnd={() => setIsConnecting(false)} // Track when connection ends
               connectionMode={ConnectionMode.Loose} // Enable multiple connections between same nodes
-              connectionLineStyle={{ stroke: "#8B5CF6", strokeWidth: 2 }} // Style connection line
+              connectionLineStyle={{
+                stroke: "hsl(var(--primary))",
+                strokeWidth: 2,
+              }} // Theme-based connection line
               fitView
               nodeTypes={{
                 providerNode: (props) => (
@@ -523,10 +526,10 @@ const page = () => {
               className="bg-transparent"
             >
               <Background
-                color="#e5e7eb"
+                color="hsl(var(--muted-foreground))"
                 gap={20}
                 size={1}
-                style={{ opacity: 0.4 }}
+                style={{ opacity: 0.3 }}
               />
             </ReactFlow>
 

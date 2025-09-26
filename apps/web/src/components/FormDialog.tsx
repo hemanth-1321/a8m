@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2 } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Plus, Trash2, FileText } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -26,6 +27,19 @@ interface FormDialogProps {
   onOpenChange: (open: boolean) => void;
   onAddNode: (node: any) => void;
 }
+
+const fieldTypes = [
+  { value: "text", label: "Text Input" },
+  { value: "email", label: "Email" },
+  { value: "number", label: "Number" },
+  { value: "tel", label: "Phone" },
+  { value: "password", label: "Password" },
+  { value: "textarea", label: "Text Area" },
+  { value: "select", label: "Select Dropdown" },
+  { value: "checkbox", label: "Checkbox" },
+  { value: "radio", label: "Radio Button" },
+  { value: "date", label: "Date" },
+];
 
 export default function FormDialog({
   provider,
@@ -50,7 +64,6 @@ export default function FormDialog({
       const updated = [...prev];
       updated[idx] = { ...updated[idx], [key]: value };
 
-      // Auto-generate key when label changes
       if (key === "label" && value.trim()) {
         updated[idx].key = value
           .toLowerCase()
@@ -107,6 +120,7 @@ export default function FormDialog({
 
     onAddNode(formNode);
     resetForm();
+    toast.success(`Form "${formName}" created with ${fields.length} fields`);
   };
 
   const resetForm = () => {
@@ -124,127 +138,160 @@ export default function FormDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          className="justify-start gap-2 mt-2 border-dashed border-blue-300 text-blue-600 hover:bg-blue-50"
-        >
+        <Button variant="outline" className="justify-start gap-2">
           <provider.icon className="h-4 w-4" />
           {provider.name}
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create Form Node</DialogTitle>
+      <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Create Form
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 mt-2">
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-1 block">
-              Form Name *
-            </label>
+        <div className="space-y-6">
+          {/* Form Name */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Form Name *</label>
             <Input
-              placeholder="Enter form name (e.g., Contact Form)"
+              placeholder="e.g., Contact Form, User Registration"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
+              className="h-10"
             />
           </div>
 
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="text-sm font-medium text-gray-700">
+          {/* Form Fields */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">
                 Form Fields ({fields.length})
               </label>
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={addField}
-                className="text-xs"
+                className="h-8"
               >
-                <Plus className="h-3 w-3 mr-1" /> Add Field
+                <Plus className="h-4 w-4 mr-1" />
+                Add Field
               </Button>
             </div>
 
             {fields.length === 0 ? (
-              <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-200 rounded-md">
-                No fields added yet. Click "Add Field" to get started.
-              </div>
+              <Card className="p-8 text-center border-dashed">
+                <p className="text-sm text-muted-foreground mb-3">
+                  No fields added yet
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addField}
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add First Field
+                </Button>
+              </Card>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {fields.map((field, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 border rounded-md bg-gray-50 space-y-2"
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-medium text-gray-600">
-                        Field {idx + 1}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeField(idx)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <Trash2 className="h-3 w-3 text-red-500" />
-                      </Button>
+                  <Card key={idx} className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* Field Label */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          Label *
+                        </label>
+                        <Input
+                          placeholder="Field label"
+                          value={field.label}
+                          onChange={(e) =>
+                            updateField(idx, "label", e.target.value)
+                          }
+                          className="h-9 text-sm"
+                        />
+                      </div>
+
+                      {/* Field Type */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          Type *
+                        </label>
+                        <select
+                          value={field.type}
+                          onChange={(e) =>
+                            updateField(idx, "type", e.target.value)
+                          }
+                          className="w-full h-9 px-3 text-sm border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                        >
+                          {fieldTypes.map((type) => (
+                            <option key={type.value} value={type.value}>
+                              {type.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeField(idx)}
+                          className="h-9 w-9 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
 
-                    <Input
-                      placeholder="Field Label (e.g., Email Address)"
-                      value={field.label}
-                      onChange={(e) =>
-                        updateField(idx, "label", e.target.value)
-                      }
-                      className="text-sm"
-                    />
-
-                    <select
-                      value={field.type}
-                      onChange={(e) => updateField(idx, "type", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select field type</option>
-                      <option value="text">Text</option>
-                      <option value="email">Email</option>
-                      <option value="number">Number</option>
-                      <option value="tel">Phone</option>
-                      <option value="password">Password</option>
-                      <option value="textarea">Textarea</option>
-                      <option value="select">Select Dropdown</option>
-                      <option value="checkbox">Checkbox</option>
-                      <option value="radio">Radio Button</option>
-                      <option value="date">Date</option>
-                      <option value="time">Time</option>
-                    </select>
-
+                    {/* Generated Key Preview */}
                     {field.label && (
-                      <div className="text-xs text-gray-500">
+                      <div className="mt-2 text-xs text-muted-foreground">
                         Key:{" "}
-                        {field.key ||
-                          field.label
-                            .toLowerCase()
-                            .replace(/\s+/g, "_")
-                            .replace(/[^a-z0-9_]/g, "")}
+                        <code className="font-mono">
+                          {field.key ||
+                            field.label
+                              .toLowerCase()
+                              .replace(/\s+/g, "_")
+                              .replace(/[^a-z0-9_]/g, "")}
+                        </code>
                       </div>
                     )}
-                  </div>
+                  </Card>
                 ))}
               </div>
             )}
           </div>
+
+          {/* Form Summary */}
+          {fields.length > 0 && (
+            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <span className="text-sm font-medium">
+                {formName || "Untitled Form"}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                {fields.length} field{fields.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={resetForm}>
+        <DialogFooter className="gap-2 pt-4">
+          <Button type="button" variant="outline" onClick={resetForm}>
             Cancel
           </Button>
           <Button
             onClick={handleAddFormNode}
-            className="bg-blue-600 hover:bg-blue-700"
             disabled={!formName.trim() || fields.length === 0}
           >
-            Save & Add Node ({fields.length} fields)
+            Create Form
           </Button>
         </DialogFooter>
       </DialogContent>

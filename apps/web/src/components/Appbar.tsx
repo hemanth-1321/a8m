@@ -1,13 +1,26 @@
 "use client";
-import { TOKEN } from "@/lib/config";
-import Link from "next/link";
+
+import {
+  Navbar,
+  NavBody,
+  MobileNav,
+  NavbarLogo,
+  NavbarButton,
+  MobileNavHeader,
+  MobileNavToggle,
+  MobileNavMenu,
+} from "@/components/ui/resizable-navbar";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
-export const Appbar = () => {
+import { TOKEN } from "@/lib/config";
+import ThemeToggle from "./ThemeToggle";
+
+export function Appbar() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
-  const { token, setToken, removeToken, loadToken } = useAuthStore();
+  const { token, removeToken, loadToken } = useAuthStore();
 
   useEffect(() => {
     setMounted(true);
@@ -20,34 +33,72 @@ export const Appbar = () => {
   };
 
   return (
-    <div className="w-full sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-gray-300">
-      <div className="flex items-center justify-between py-4 px-4 max-w-6xl mx-auto">
-        {/* Logo + Brand */}
-        <Link href="/">
-          <div className="flex items-center gap-2">
-            <img src="/a8m.jpeg" alt="logo" className="h-10 w-auto" />
+    <div className="relative w-full sticky top-0 z-50 transition-colors duration-500">
+      <Navbar>
+        {/* Desktop Navigation */}
+        <NavBody>
+          <NavbarLogo />
+          <div className="flex items-center gap-4">
+            {/* Theme toggler first */}
+            <ThemeToggle />
+            {!mounted ? null : token ? (
+              <NavbarButton variant="secondary" onClick={handleLogout}>
+                Logout
+              </NavbarButton>
+            ) : (
+              <NavbarButton
+                variant="primary"
+                onClick={() => router.push("/auth")}
+              >
+                Login
+              </NavbarButton>
+            )}
           </div>
-        </Link>
+        </NavBody>
 
-        {/* Buttons */}
-        <div className="flex items-center gap-4">
-          {!mounted ? null : token ? (
-            <button
-              onClick={handleLogout}
-              className="text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 py-2 px-4 rounded-lg font-bold shadow-lg tracking-wide transition-all duration-200 transform hover:scale-105"
-            >
-              Logout
-            </button>
-          ) : (
-            <button
-              onClick={() => router.push("/auth")}
-              className="text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 py-2 px-4 rounded-lg font-bold shadow-lg tracking-wide transition-all duration-200 transform hover:scale-105"
-            >
-              Login
-            </button>
-          )}
-        </div>
-      </div>
+        {/* Mobile Navigation */}
+        <MobileNav>
+          <MobileNavHeader>
+            <NavbarLogo />
+            <MobileNavToggle
+              isOpen={isMobileMenuOpen}
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            />
+          </MobileNavHeader>
+
+          <MobileNavMenu
+            isOpen={isMobileMenuOpen}
+            onClose={() => setIsMobileMenuOpen(false)}
+          >
+            <div className="flex w-full flex-col gap-4">
+              <ThemeToggle />
+              {!mounted ? null : token ? (
+                <NavbarButton
+                  onClick={() => {
+                    handleLogout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  variant="secondary"
+                  className="w-full"
+                >
+                  Logout
+                </NavbarButton>
+              ) : (
+                <NavbarButton
+                  onClick={() => {
+                    router.push("/auth");
+                    setIsMobileMenuOpen(false);
+                  }}
+                  variant="primary"
+                  className="w-full"
+                >
+                  Login
+                </NavbarButton>
+              )}
+            </div>
+          </MobileNavMenu>
+        </MobileNav>
+      </Navbar>
     </div>
   );
-};
+}

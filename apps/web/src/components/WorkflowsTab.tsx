@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { BACKEND_URL, TOKEN } from "@/lib/config";
 import { Workflow } from "@/lib/types";
 import CreateWorkflowDialog from "@/components/CreateWorkflowDialog";
-import { Trash2 } from "lucide-react";
+import { Trash2, Zap, Calendar, Play, Pause, Plus } from "lucide-react";
 
 export default function WorkflowsTab() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -35,7 +35,7 @@ export default function WorkflowsTab() {
       workflowsData.forEach((w: Workflow) => (toggles[w.id] = true));
       setWorkflowToggles(toggles);
 
-      setError(null); // clear previous errors
+      setError(null);
     } catch (err) {
       console.error(err);
       setError("Failed to load workflows");
@@ -49,7 +49,6 @@ export default function WorkflowsTab() {
     loadWorkflows();
   }, []);
 
-  // Handle workflow created
   const handleWorkflowCreated = () => {
     loadWorkflows();
   };
@@ -66,8 +65,6 @@ export default function WorkflowsTab() {
       });
 
       toast.success("Workflow deleted successfully");
-
-      // Reload workflows after deletion
       await loadWorkflows();
     } catch (error) {
       console.error(error);
@@ -94,13 +91,17 @@ export default function WorkflowsTab() {
     else toast.info(`Workflow "${workflow?.title}" disabled`);
   };
 
+  // Calculate stats
+  const activeWorkflows = workflows.filter((w) => workflowToggles[w.id]).length;
+  const totalWorkflows = workflows.length;
+
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header Section */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Workflows</h2>
-          <p className="text-slate-600">
+          <h2 className="text-xl font-semibold">Workflows</h2>
+          <p className="text-muted-foreground">
             Manage and monitor your automated workflows
           </p>
         </div>
@@ -112,42 +113,19 @@ export default function WorkflowsTab() {
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin"></div>
-              <p className="text-slate-600">Loading workflows...</p>
+              <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-foreground rounded-full animate-spin"></div>
+              <p className="text-muted-foreground">Loading workflows...</p>
             </div>
-          </div>
-        ) : error ? (
-          <div className="text-center py-12">
-            <p className="text-red-600 mb-2">{error}</p>
-            <button
-              onClick={loadWorkflows}
-              className="text-slate-600 hover:text-slate-900 text-sm underline"
-            >
-              Try again
-            </button>
           </div>
         ) : workflows.length === 0 ? (
           <div className="text-center py-12">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 mb-4">
-              <svg
-                className="h-6 w-6 text-slate-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
+              <Zap className="h-6 w-6 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">
-              No workflows found
-            </h3>
-            <p className="text-slate-600 mb-4">
-              Create your first workflow to get started
+            <h3 className="text-lg font-semibold mb-2">No workflows found</h3>
+            <p className="text-muted-foreground mb-4">
+              Create your first workflow to automate your processes and boost
+              productivity
             </p>
           </div>
         ) : (
@@ -155,63 +133,56 @@ export default function WorkflowsTab() {
             {workflows.map((workflow) => (
               <div
                 key={workflow.id}
-                className={`group relative overflow-hidden rounded-xl border transition-all duration-200 hover:shadow-md ${
-                  workflowToggles[workflow.id]
-                    ? "border-slate-200 bg-white shadow-sm"
-                    : "border-slate-100 bg-slate-50/50"
-                }`}
+                className="group relative overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-200 hover:shadow-md cursor-pointer"
+                onClick={() => handleWorkflowClick(workflow)}
               >
-                <div
-                  className="flex items-center justify-between p-6 cursor-pointer"
-                  onClick={() => handleWorkflowClick(workflow)}
-                >
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex items-center space-x-3">
-                      <h3
-                        className={`font-semibold text-lg ${
-                          workflowToggles[workflow.id]
-                            ? "text-slate-900"
-                            : "text-slate-600"
-                        }`}
-                      >
-                        {workflow.title}
-                      </h3>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          workflowToggles[workflow.id]
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        {workflowToggles[workflow.id] ? "Active" : "Inactive"}
-                      </span>
+                <div className="flex items-center justify-between p-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                      <Zap className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <div className="flex items-center space-x-4 text-sm text-slate-500">
-                      <span>Trigger: {workflow.trigger}</span>
-                      <span>
-                        Created:{" "}
-                        {new Date(workflow.createdAt).toLocaleDateString()}
-                      </span>
+                    <div>
+                      <div className="flex items-center space-x-3 mb-1">
+                        <h3 className="font-semibold capitalize">
+                          {workflow.title}
+                        </h3>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            workflowToggles[workflow.id]
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {workflowToggles[workflow.id] ? "Active" : "Inactive"}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                        <span>Trigger: {workflow.trigger}</span>
+                        <span>
+                          Created:{" "}
+                          {new Date(workflow.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Toggle and Delete Button */}
-                  <div className="ml-6 flex-shrink-0 flex items-center space-x-3">
+                  <div className="flex items-center space-x-4">
+                    {/* Toggle Switch */}
                     <Switch
                       checked={workflowToggles[workflow.id] || false}
                       onCheckedChange={(checked) =>
                         handleToggleChange(workflow.id, checked)
                       }
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ${
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                         workflowToggles[workflow.id]
-                          ? "bg-slate-900"
-                          : "bg-slate-200"
+                          ? "bg-primary"
+                          : "bg-muted-foreground/30"
                       }`}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <span className="sr-only">Enable workflow</span>
                       <span
-                        className={`pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${
+                        className={`pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-background shadow transition duration-200 ${
                           workflowToggles[workflow.id]
                             ? "translate-x-5"
                             : "translate-x-0"
@@ -219,19 +190,16 @@ export default function WorkflowsTab() {
                       />
                     </Switch>
 
+                    {/* Delete Button */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteWorkflow(workflow.id);
                       }}
-                      className="p-1 text-red-500 hover:text-red-700"
+                      className="cursor-pointer text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-2 rounded"
                       disabled={loading}
                     >
-                      {loading ? (
-                        <div className=" w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                      ) : (
-                        <Trash2 size={20} className="cursor-pointer" />
-                      )}
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>

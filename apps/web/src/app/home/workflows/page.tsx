@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import WorkflowsTab from "@/components/WorkflowsTab";
 import CredentialsTab from "@/components/CredentialsTab";
 import { useAuthStore } from "@/store/authStore";
@@ -22,14 +22,18 @@ export default function OverviewPage() {
   }, [token, router]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-6xl mx-auto p-6">
+    <div className="min-h-screen overflow-hidden transition-colors duration-500 bg-white dark:bg-neutral-950">
+      {/* Background borders */}
+      <div className="max-w-6xl mx-auto absolute inset-0 h-full w-full pointer-events-none">
+        <div className="absolute inset-y-0 left-0 h-full w-px z-10 bg-gradient-to-b from-neutral-200/50 via-neutral-200 to-transparent dark:from-neutral-800/50 dark:via-neutral-700" />
+        <div className="absolute inset-y-0 right-0 h-full w-px z-10 bg-gradient-to-b from-neutral-200/50 via-neutral-200 to-transparent dark:from-neutral-800/50 dark:via-neutral-700" />
+      </div>
+
+      <div className="max-w-6xl mx-auto p-6 relative z-20">
         {/* Main Header */}
         <section className="mb-8">
-          <h1 className="text-3xl font-semibold text-slate-900 mb-2">
-            Overview
-          </h1>
-          <p className="text-slate-600 text-lg">
+          <h1 className="text-3xl font-semibold mb-2">Overview</h1>
+          <p className="text-lg">
             Manage your workflows, credentials, and executions
           </p>
         </section>
@@ -37,16 +41,16 @@ export default function OverviewPage() {
         {/* Tabs */}
         <section>
           <Tabs defaultValue="workflows" className="space-y-6">
-            <TabsList className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-100 p-1">
+            <TabsList className="inline-flex h-10 items-center justify-center rounded-lg p-1 bg-neutral-100 dark:bg-neutral-900">
               <TabsTrigger
                 value="workflows"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all duration-200"
+                className="cursor-pointer inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
               >
                 Workflows
               </TabsTrigger>
               <TabsTrigger
                 value="credentials"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm transition-all duration-200"
+                className="cursor-pointer inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
               >
                 Credentials
               </TabsTrigger>

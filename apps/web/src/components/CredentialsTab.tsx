@@ -20,7 +20,6 @@ export default function CredentialsTab() {
   const [loading, setLoading] = useState<boolean>(false);
 
   // Load credentials
-  // Load credentials
   const loadCredentials = async () => {
     setLoading(true);
     try {
@@ -73,8 +72,8 @@ export default function CredentialsTab() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Credentials</h2>
-          <p className="text-slate-600">
+          <h2 className="text-xl font-semibold">Credentials</h2>
+          <p className="text-muted-foreground">
             Manage your service credentials and API keys
           </p>
         </div>
@@ -86,19 +85,17 @@ export default function CredentialsTab() {
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin"></div>
-              <p className="text-slate-600">Loading credentials...</p>
+              <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-foreground rounded-full animate-spin"></div>
+              <p className="text-muted-foreground">Loading credentials...</p>
             </div>
           </div>
         ) : credentials.length === 0 ? (
           <div className="text-center py-12">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 mb-4">
-              <Key className="h-6 w-6 text-slate-400" />
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
+              <Key className="h-6 w-6 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">
-              No credentials found
-            </h3>
-            <p className="text-slate-600 mb-4">
+            <h3 className="text-lg font-semibold mb-2">No credentials found</h3>
+            <p className="text-muted-foreground mb-4">
               Add credentials to connect your workflows with external services
             </p>
           </div>
@@ -107,18 +104,18 @@ export default function CredentialsTab() {
             {credentials.map((credential) => (
               <div
                 key={credential.id}
-                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md"
+                className="group relative overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-200 hover:shadow-md"
               >
                 <div className="flex items-center justify-between p-6">
                   <div className="flex items-center space-x-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
-                      <Shield className="h-5 w-5 text-slate-600" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                      <Shield className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-900 capitalize">
+                      <h3 className="font-semibold capitalize">
                         {credential.name}
                       </h3>
-                      <div className="flex items-center space-x-4 text-sm text-slate-500">
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                         <span>Type: {credential.type}</span>
                         <span>
                           Added:{" "}
@@ -132,7 +129,7 @@ export default function CredentialsTab() {
                     variant="ghost"
                     size="sm"
                     onClick={() => deleteCredential(credential.id)}
-                    className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    className="cursor-pointer text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
