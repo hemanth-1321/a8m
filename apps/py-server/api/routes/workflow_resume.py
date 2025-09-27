@@ -1,37 +1,27 @@
-from fastapi import FastAPI, Request,APIRouter
-from db.database import get_db
-from db.models import Node, Workflow
-from sqlalchemy.orm import Session
+from fastapi import FastAPI, Request, APIRouter
 
 WORKFLOW_RESUME = APIRouter()
+
 @WORKFLOW_RESUME.post("/workflow/resume")
 async def resume_workflow(request: Request):
-    data = await request.json()
-    reply_token = data.get("reply_token")
+    form = await request.form()
+    data = {key: form[key] for key in form.keys()}
 
-    if not reply_token:
-        return {"error": "Missing reply_token"}
+    from_email = data.get("from")
+    subject = data.get("subject")
+    text_body = data.get("text")
+    html_body = data.get("html")
 
-    # Parse token: [WF-<workflowId>-N-<nodeId>]
-    try:
-        parts = reply_token.strip("[]").split("-")
-        workflow_id = int(parts[1])
-        node_id = int(parts[3])
-    except Exception:
-        return {"error": "Invalid reply token"}
+    # Print everything
+    print("From:", from_email)
+    print("Subject:", subject)
+    print("Text body:", text_body)
+    print("HTML body:", html_body)
 
-    db: Session = next(get_db())
-
-    node = db.query(Node).filter(Node.id == node_id).first()
-    if not node:
-        return {"error": "Node not found"}
-
-    # Mark node completed & continue workflow
-    node.status = "completed"
-    db.commit()
-
-    # TODO: Trigger execution of next node in workflow
-    # execution(node_id, workflow_id, {"email_reply": data})
-    
-
-    return {"status": "resumed", "workflow": workflow_id, "node": node_id}
+    # Return as JSON
+    return {
+        "from": from_email,
+        "subject": subject,
+        "text": text_body,
+        "html": html_body
+    }

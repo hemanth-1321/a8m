@@ -6,7 +6,6 @@ from typing import Dict,Any
 from db.models import Workflow,Node
 from utils.get_execution_order import get_execution_order
 from utils.execution import execution
-from utils.check_imap_for_reply import check_imap_for_reply
 #worker
 @celery.task(bind=True, max_retries=5, default_retry_delay=10)
 def process_webhook_task(self, user_id: str, workflow_id: str, initial_data: Dict[str, Any]):
