@@ -21,8 +21,7 @@ const Page = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background elements */}
+    <div className="min-h-screen bg-gradient-to-br flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -43,22 +42,22 @@ const Page = () => {
         </div>
 
         {/* Main card */}
-        <div className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl p-8 transition-all duration-300 hover:shadow-3xl">
+        <div className=" backdrop-blur-xl border  shadow-2xl rounded-2xl p-8 transition-all duration-300 hover:shadow-3xl">
           <Tabs
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as "signin" | "signup")}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100/50 rounded-xl p-1 h-12">
+            <TabsList className="grid w-full grid-cols-2 mb-6  rounded-xl p-1 h-12">
               <TabsTrigger
                 value="signin"
-                className="rounded-lg font-medium transition-all duration-200 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600"
+                className="cursor-pointer rounded-lg font-medium transition-all duration-200 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600"
               >
                 Sign In
               </TabsTrigger>
               <TabsTrigger
                 value="signup"
-                className="rounded-lg font-medium transition-all duration-200 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600"
+                className="cursor-pointer rounded-lg font-medium transition-all duration-200 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600"
               >
                 Sign Up
               </TabsTrigger>

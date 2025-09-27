@@ -5,6 +5,7 @@ from api.routes.CredentialRoutes import CREDENTIAL_ROUTES
 from api.routes.workflowRoutes import WORKFLOW_ROUTES
 from api.routes.nodeRoutes import NODE_ROUTER
 from api.routes.webhookRoutes import WEBHOOK
+from api.routes.workflow_resume import WORKFLOW_RESUME
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -35,6 +36,7 @@ app.include_router(CREDENTIAL_ROUTES,prefix="/api/v1/credentials",tags=["credent
 app.include_router(WORKFLOW_ROUTES,prefix="/api/v1/workflows",tags=["workflows"])
 app.include_router(NODE_ROUTER,prefix="/api/v1/node",tags=["nodes"])
 app.include_router(WEBHOOK,prefix="/api/v1/webhook",tags=["webhooks"])
+app.include_router(WORKFLOW_RESUME,prefix="/api/v1",tags=["workflow_resume"])
 if __name__=="__main__":
     import uvicorn
     uvicorn.run(app,host="0.0.0.0",port=8000,reload=True)

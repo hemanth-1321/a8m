@@ -3,7 +3,7 @@ import os
 from celery_app import celery
 from sqlalchemy.orm import Session
 from db.database import get_db
-from typing import Dict, Any
+from typing import Dict, Any,Optional
 from db.models import Node
 from utils.get_credentails import get_credentials
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 GEMINI_API_KEY=os.getenv("GEMINI_KEY")
-def sendEmail(to: str, subject: str, body: str, api_key: str):
+def sendEmail(to: str, subject: str, body: str, api_key: str,reply_to:Optional[str]=None):
     """Send email using Resend API."""
     resend.api_key = api_key
     
@@ -34,11 +34,12 @@ def sendEmail(to: str, subject: str, body: str, api_key: str):
     params: resend.Emails.SendParams = {
         "from": "Hemanth <noreply@resend.hemanth.buzz>", 
         "to": to,
-        "reply_to":"akdon9936@gmial.com",
         "subject": subject,
         "html": html_content,
         "text": body,  
     }
+    if reply_to is not None:
+        params["reply_to"] = "hi@hemanth.buzz"
     
     email = resend.Emails.send(params)
     print(f"Email sent: {email}")

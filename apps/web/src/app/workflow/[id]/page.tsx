@@ -14,6 +14,8 @@ import {
   EdgeChange,
   Connection,
   ConnectionMode,
+  Controls,
+  MiniMap,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import axios from "axios";
@@ -24,7 +26,8 @@ import { v4 as uuidv4 } from "uuid";
 import { Button } from "@/components/ui/button";
 import Sidebar from "@/components/Sidebar";
 import ProviderNode from "@/components/ProviderNode";
-import { Play } from "lucide-react";
+import { Play, Save, Moon, Sun, Loader2 } from "lucide-react";
+import { useTheme } from "next-themes";
 
 interface NodeData {
   name?: string;
@@ -32,8 +35,8 @@ interface NodeData {
   color?: string;
   trigger?: "Manual" | "Cron" | "Webhook";
   enabled?: boolean;
-  type?: string; // Add type to store provider type
-  id?: string; // Add provider id
+  type?: string;
+  id?: string;
   [key: string]: any;
 }
 
@@ -47,7 +50,7 @@ interface RawNode {
   position_x?: number;
   position_y?: number;
   type?: string | null;
-  provider_type?: string; // Add provider_type for backend
+  provider_type?: string;
 }
 
 interface RawEdge {
@@ -55,8 +58,8 @@ interface RawEdge {
   workflow_id: string;
   source_node_id: string;
   target_node_id: string;
-  source_handle?: string; // Add handle support
-  target_handle?: string; // Add handle support
+  source_handle?: string;
+  target_handle?: string;
 }
 
 interface WorkflowResponse {
@@ -76,6 +79,7 @@ const page = () => {
   const { id } = useParams();
   const router = useRouter();
   const { token, loadToken } = useAuthStore();
+  const { theme, setTheme } = useTheme();
   const [executing, setExecuting] = useState(false);
 
   const [nodes, setNodes] = useState<Node<NodeData>[]>([]);
@@ -84,7 +88,7 @@ const page = () => {
   const [workflowEnabled, setWorkflowEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saveWorkflowLoading, setSaveWorkflowLoading] = useState(false);
-  const [workflowLoaidng, setWorkFlowLoading] = useState(false);
+  const [workflowLoading, setWorkFlowLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
@@ -106,7 +110,6 @@ const page = () => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && isConnecting) {
         setIsConnecting(false);
-        // Force re-render to cancel connection
         setEdges((edges) => [...edges]);
       }
     };
@@ -134,15 +137,12 @@ const page = () => {
     []
   );
 
-  // Updated onConnect function with multi-handle support
   const onConnect = useCallback(
     (params: Connection) => {
       if (!params.source || !params.target) return;
 
-      // Create a unique identifier for this connection combination
       const connectionKey = `${params.source}-${params.sourceHandle || "default"}-${params.target}-${params.targetHandle || "default"}`;
 
-      // Check if this exact connection already exists
       const existingEdge = edges.find((edge) => {
         const edgeKey = `${edge.source}-${edge.sourceHandle || "default"}-${edge.target}-${edge.targetHandle || "default"}`;
         return edgeKey === connectionKey;
@@ -154,20 +154,21 @@ const page = () => {
       }
 
       const newEdge: Edge = {
-        id: uuidv4(), // Use proper UUID for backend compatibility
+        id: uuidv4(),
         source: params.source,
         target: params.target,
         sourceHandle: params.sourceHandle,
         targetHandle: params.targetHandle,
-        // Optional: Add different styling based on handle
-        style: params.sourceHandle?.includes("source")
-          ? { stroke: "#8B5CF6", strokeWidth: 2 }
-          : { stroke: "#6B7280", strokeWidth: 2 },
+        style: {
+          stroke: theme === "dark" ? "#a855f7" : "#8b5cf6",
+          strokeWidth: 2,
+        },
+        animated: true,
       };
 
       setEdges((eds) => addEdge(newEdge, eds));
     },
-    [edges]
+    [edges, theme]
   );
 
   const addNode = (provider: any) => {
@@ -183,8 +184,8 @@ const page = () => {
         ...providerData,
         trigger: "Manual",
         enabled: true,
-        type: provider.type || provider.id, // Store provider type/id
-        id: provider.id, // Store provider id
+        type: provider.type || provider.id,
+        id: provider.id,
       },
     };
 
@@ -194,7 +195,6 @@ const page = () => {
 
   const deleteNode = useCallback((nodeId: string) => {
     setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-    // Also remove edges connected to this node
     setEdges((eds) =>
       eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
     );
@@ -276,21 +276,22 @@ const page = () => {
             name: n.title,
             trigger: n.trigger || "Manual",
             enabled: n.enabled ?? true,
-            type: n.type || n.provider_type, // Load provider type
-            id: n.provider_type, // Load provider id
+            type: n.type || n.provider_type,
+            id: n.provider_type,
           },
         }));
 
-        // Updated edge loading with handle support
         const loadEdges: Edge[] = (wf.edges || []).map((e) => ({
           id: e.id,
           source: e.source_node_id,
           target: e.target_node_id,
-          sourceHandle: e.source_handle, // Load handle information
-          targetHandle: e.target_handle, // Load handle information
-          style: e.source_handle?.includes("source")
-            ? { stroke: "#8B5CF6", strokeWidth: 2 }
-            : { stroke: "#6B7280", strokeWidth: 2 },
+          sourceHandle: e.source_handle,
+          targetHandle: e.target_handle,
+          style: {
+            stroke: theme === "dark" ? "#a855f7" : "#8b5cf6",
+            strokeWidth: 2,
+          },
+          animated: true,
         }));
 
         setNodes(loadNodes);
@@ -305,7 +306,7 @@ const page = () => {
     };
 
     if (token) fetchWorkflow();
-  }, [id, token]);
+  }, [id, token, theme]);
 
   const saveWorkflow = async () => {
     setSaveWorkflowLoading(true);
@@ -343,34 +344,18 @@ const page = () => {
         position_x: n.position.x,
         position_y: n.position.y,
         workflow_id: id,
-        type: n.data.type || n.data.id, // Include provider type
-        provider_type: n.data.type || n.data.id, // Include as provider_type for backend
+        type: n.data.type || n.data.id,
+        provider_type: n.data.type || n.data.id,
       })),
-      // Updated edges with handle support
       edges: validEdges.map((e) => ({
         id: e.id,
         source_node_id: e.source,
         target_node_id: e.target,
-        source_handle: e.sourceHandle, // Include handle information
-        target_handle: e.targetHandle, // Include handle information
+        source_handle: e.sourceHandle,
+        target_handle: e.targetHandle,
         workflow_id: id,
       })),
     };
-
-    console.log("payload", payload);
-    console.log("Saving workflow with:", {
-      nodes: payload.nodes.length,
-      edges: payload.edges.length,
-      nodeTypes: payload.nodes.map((n) => ({
-        name: n.title,
-        type: n.provider_type,
-      })),
-      edgeHandles: payload.edges.map((e) => ({
-        id: e.id,
-        sourceHandle: e.source_handle,
-        targetHandle: e.target_handle,
-      })),
-    });
 
     try {
       const response = await axios.post(
@@ -396,7 +381,6 @@ const page = () => {
       }));
 
       const validNodeIds = new Set(syncedNodes.map((n) => n.id));
-      // Updated synced edges with handle support
       const syncedEdges: Edge[] = savedWf.edges
         .filter(
           (e: any) =>
@@ -407,11 +391,13 @@ const page = () => {
           id: e.id,
           source: e.source_node_id,
           target: e.target_node_id,
-          sourceHandle: e.source_handle, // Sync handle information
-          targetHandle: e.target_handle, // Sync handle information
-          style: e.source_handle?.includes("source")
-            ? { stroke: "#8B5CF6", strokeWidth: 2 }
-            : { stroke: "#6B7280", strokeWidth: 2 },
+          sourceHandle: e.source_handle,
+          targetHandle: e.target_handle,
+          style: {
+            stroke: theme === "dark" ? "#a855f7" : "#8b5cf6",
+            strokeWidth: 2,
+          },
+          animated: true,
         }));
 
       setNodes(syncedNodes);
@@ -425,127 +411,199 @@ const page = () => {
     }
   };
 
+  if (loading || workflowLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading workflow...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-50 to-white relative overflow-hidden">
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]">
-        <div className="flex items-center justify-between max-w-7xl mx-auto px-6 py-4">
-          <div className="flex flex-col">
-            <label className="scroll-m-20 text-xs font-semibold tracking-tigh ml-2 mb-2">
+    <div className="h-screen bg-background relative overflow-hidden">
+      {/* Header */}
+      <div className="border-b border-border bg-card/50 backdrop-blur-sm">
+        <div className="flex items-center justify-between max-w-full mx-auto px-6 py-4">
+          {/* Left Section - Workflow Name */}
+          <div className="flex flex-col min-w-0 flex-1 max-w-sm">
+            <label className="text-xs font-medium text-muted-foreground mb-2 ml-1">
               Workflow Name
             </label>
             <input
               type="text"
               value={workflowTitle}
               onChange={(e) => setWorkflowTitle(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm 
-                  focus:outline-none focus:ring-2 focus:ring-purple-500 
-                  focus:border-transparent bg-white"
+              className="px-3 py-2 border border-input rounded-lg text-sm 
+                  focus:outline-none focus:ring-2 focus:ring-ring 
+                  focus:border-transparent bg-background text-foreground
+                  placeholder:text-muted-foreground"
               placeholder="Enter workflow name"
             />
           </div>
 
-          <div className="flex items-center gap-2"></div>
-
-          <div className="flex items-center gap-6">
-            <Button
-              onClick={saveWorkflow}
-              className="bg-gradient-to-r from-emerald-500 to-teal-600 
-                  hover:from-emerald-600 hover:to-teal-700 text-white 
-                  px-6 py-2 rounded-lg font-medium shadow-lg 
-                  transition-all duration-200 transform hover:scale-105"
-            >
-              {saveWorkflowLoading ? "saving" : "save workflow"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={executeWorkflow}
-              disabled={executing}
-              className={`p-2 rounded-full bg-purple-500 hover:bg-purple-600 text-white shadow-lg flex items-center justify-center cursor-pointer ${
-                executing ? "opacity-70 cursor-not-allowed" : ""
-              }`}
-              title="Execute Workflow"
-            >
-              {executing ? (
-                <svg
-                  className="w-5 h-5 animate-spin text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                  ></path>
-                </svg>
-              ) : (
-                <Play className="w-5 h-5" />
-              )}
-            </Button>
-            {nodes.length > 0 ? (
-              <Sidebar onAddNode={addNode} nodes={nodes} />
-            ) : (
-              <></>
-            )}
-          </div>
-        </div>
-
-        <div className="flex h-[calc(100vh-88px)] relative">
-          <div className="flex-1 relative">
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodeChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onConnectStart={() => setIsConnecting(true)} // Track when connection starts
-              onConnectEnd={() => setIsConnecting(false)} // Track when connection ends
-              connectionMode={ConnectionMode.Loose} // Enable multiple connections between same nodes
-              connectionLineStyle={{
-                stroke: "hsl(var(--primary))",
-                strokeWidth: 2,
-              }} // Theme-based connection line
-              fitView
-              nodeTypes={{
-                providerNode: (props) => (
-                  <ProviderNode
-                    {...props}
-                    deleteNode={deleteNode}
-                    updateNodeData={updateNode}
-                  />
-                ),
-              }}
-              className="bg-transparent"
-            >
-              <Background
-                color="hsl(var(--muted-foreground))"
-                gap={20}
-                size={1}
-                style={{ opacity: 0.3 }}
-              />
-            </ReactFlow>
-
-            {nodes.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Sidebar onAddNode={addNode} nodes={nodes} />
-              </div>
-            )}
-
-            <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-sm border border-gray-200">
-              <div className="flex items-center gap-4 text-xs text-gray-600">
-                <span>Nodes: {nodes.length}</span>
-                <span>Connections: {edges.length}</span>
-              </div>
+          {/* Center Section - Stats */}
+          <div className="hidden md:flex items-center gap-6 px-6">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+              <span>Nodes: {nodes.length}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+              <span>Connections: {edges.length}</span>
             </div>
           </div>
+
+          {/* Right Section - Actions */}
+          <div className="flex items-center gap-3">
+            {/* Save Button */}
+            <Button
+              onClick={saveWorkflow}
+              disabled={saveWorkflowLoading}
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 
+                  hover:from-emerald-600 hover:to-teal-700 text-white 
+                  px-4 py-2 rounded-lg font-medium shadow-lg 
+                  transition-all duration-200 transform hover:scale-105
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  disabled:transform-none"
+            >
+              {saveWorkflowLoading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Save className="w-4 h-4" />
+                  <span>Save</span>
+                </div>
+              )}
+            </Button>
+
+            {/* Execute Button */}
+            <Button
+              onClick={executeWorkflow}
+              disabled={executing || nodes.length === 0}
+              className="bg-gradient-to-r from-purple-500 to-violet-600 
+                  hover:from-purple-600 hover:to-violet-700 text-white 
+                  px-4 py-2 rounded-lg font-medium shadow-lg 
+                  transition-all duration-200 transform hover:scale-105
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  disabled:transform-none"
+            >
+              {executing ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Running...</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Play className="w-4 h-4" />
+                  <span>Execute</span>
+                </div>
+              )}
+            </Button>
+
+            {/* Sidebar Toggle */}
+            {nodes.length > 0 && <Sidebar onAddNode={addNode} nodes={nodes} />}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex h-[calc(100vh-88px)] relative">
+        <div className="flex-1 relative">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodeChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onConnectStart={() => setIsConnecting(true)}
+            onConnectEnd={() => setIsConnecting(false)}
+            connectionMode={ConnectionMode.Loose}
+            connectionLineStyle={{
+              stroke: theme === "dark" ? "#a855f7" : "#8b5cf6",
+              strokeWidth: 2,
+            }}
+            fitView
+            nodeTypes={{
+              providerNode: (props) => (
+                <ProviderNode
+                  {...props}
+                  deleteNode={deleteNode}
+                  updateNodeData={updateNode}
+                />
+              ),
+            }}
+            className="bg-background"
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background
+              color={theme === "dark" ? "#374151" : "#d1d5db"}
+              gap={20}
+              size={1}
+              style={{ opacity: theme === "dark" ? 0.2 : 0.3 }}
+            />
+            <Controls
+              className="bg-card border border-border shadow-lg"
+              showZoom={true}
+              showFitView={true}
+              showInteractive={false}
+            />
+            <MiniMap
+              className="bg-card border border-border shadow-lg"
+              nodeColor={theme === "dark" ? "#6366f1" : "#8b5cf6"}
+              maskColor={
+                theme === "dark"
+                  ? "rgba(0, 0, 0, 0.6)"
+                  : "rgba(255, 255, 255, 0.6)"
+              }
+            />
+          </ReactFlow>
+
+          {/* Empty State */}
+          {nodes.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center max-w-md mx-auto px-6">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900 dark:to-blue-900 flex items-center justify-center">
+                  <Play className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-3">
+                  Start Building Your Workflow
+                </h3>
+                <p className="text-muted-foreground mb-6">
+                  Add your first node to begin creating an automated workflow.
+                  Connect different services and create powerful automations.
+                </p>
+                <Sidebar onAddNode={addNode} nodes={nodes} />
+              </div>
+            </div>
+          )}
+
+          {/* Status Bar */}
+          {nodes.length > 0 && (
+            <div className="absolute bottom-4 right-4 bg-card/90 backdrop-blur-sm rounded-lg px-4 py-3 shadow-lg border border-border">
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                  <span>Nodes: {nodes.length}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                  <span>Connections: {edges.length}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-2 h-2 rounded-full ${workflowEnabled ? "bg-green-500" : "bg-red-500"}`}
+                  ></div>
+                  <span>{workflowEnabled ? "Active" : "Inactive"}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
