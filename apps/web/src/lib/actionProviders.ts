@@ -2,14 +2,13 @@ import {
   Bot,
   MessageSquare,
   Mail,
-  Send,
   Sparkles,
   Zap,
   FileText,
   Webhook,
   Play,
   Brain,
-  Globe,
+  Send,
   Github,
 } from "lucide-react";
 
@@ -112,12 +111,23 @@ export const providers = [
     fields: [],
   },
   {
-    id: "notion",
-    name: "Notion",
+    id: "telegram",
+    name: "Telegram",
     type: "action",
-    icon: FileText,
-    color: "from-gray-500 to-black",
-    description: "Save data to Notion pages or databases",
-    fields: [],
+    icon: MessageSquare,
+    color: "from-blue-400 to-blue-600",
+    description: "Send messages via Telegram bot",
+    fields: [
+      {
+        label: "Bot Token",
+        key: "bot_token",
+        placeholder: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
+      },
+      {
+        label: "Chat ID",
+        key: "chat_id",
+        placeholder: "-123456789 or @username",
+      },
+    ],
   },
 ];

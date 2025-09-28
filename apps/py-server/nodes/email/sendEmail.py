@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 GEMINI_API_KEY=os.getenv("GEMINI_KEY")
-def sendEmail(to: str, subject: str, body: str, api_key: str,reply_to:Optional[str]=None):
+def sendEmail(to: str, subject: str, body: str, api_key: str):
     """Send email using Resend API."""
     resend.api_key = api_key
     
@@ -35,12 +35,12 @@ def sendEmail(to: str, subject: str, body: str, api_key: str,reply_to:Optional[s
         "from": "Hemanth <noreply@resend.hemanth.buzz>", 
         "to": to,
         "subject": subject,
+        "reply_to":"hi@mail.hemanth.buzz",
+        
         "html": html_content,
         "text": body,  
     }
-    if reply_to is not None:
-        params["reply_to"] = "hi@hemanth.buzz"
-    
+ 
     email = resend.Emails.send(params)
     print(f"Email sent: {email}")
     return email
@@ -111,6 +111,11 @@ def run_gmail_node(node: Node, input_data: Dict[str, Any], user_id,wait_for_repl
         if not api_key:
             return {"error": "Missing API key in credentials"}
 
+        reply_token=None,
+        if wait_for_reply:
+            reply_token = f"[WF-{node.workflow_id}-N-{node.id}]"
+            subject = f"{subject} {reply_token}" 
+            
         email_result = sendEmail(to=email_to, subject=subject, body=body, api_key=api_key)
         metadata=node.data or {}
         print("wair for rply",wait_for_reply)
@@ -118,10 +123,7 @@ def run_gmail_node(node: Node, input_data: Dict[str, Any], user_id,wait_for_repl
             reply_token=f"[WF-{node.workflow_id}-N-{node.id}]"
             metadata.update({
                 "reply_token":reply_token,
-                "imap_host": "imap.gmail.com",
-                "email_user":credentials["data"].get("email"),
-                "email_pass":credentials["data"].get("appPassword"),
-                "mailbox":"INBOX"
+                
             })
             print("updated to waiting for rply")
             node.status="waiting_for_reply"
