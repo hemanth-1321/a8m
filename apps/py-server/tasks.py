@@ -1,6 +1,6 @@
 from celery_app import celery
 from sqlalchemy.orm import Session
-from db.database import get_db
+from db.syncDB import get_db
 from db.models import WorkflowExecution, Workflow
 from typing import Dict, Any,Optional
 from utils.get_execution_order import get_execution_order

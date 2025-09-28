@@ -2,7 +2,7 @@ import resend
 import os
 from celery_app import celery
 from sqlalchemy.orm import Session
-from db.database import get_db
+from db.syncDB import get_db
 from typing import Dict, Any,Optional
 from db.models import Node
 from utils.get_credentails import get_credentials

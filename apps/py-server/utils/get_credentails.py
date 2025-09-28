@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from db.database import get_db
-from db.models import Workflow, Node, Credentials
+from db.syncDB import get_db
+from db.models import  Node, Credentials
 from uuid import UUID
 
 def get_credentials(node_id: UUID, cred_name: str, user_id: str):

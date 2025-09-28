@@ -1,48 +1,43 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from db.models import Workflow
 from models.response import Http
-from models.schema import  ResponseModel
+from models.schema import ResponseModel
 from uuid import UUID
-from tasks import process_webhook_task  # import the task
-from sqlalchemy.exc import SQLAlchemyError
+from tasks import process_webhook_task  # celery task
 
-def webhook_start(db: Session,  workflow_id: UUID, data: dict)->ResponseModel:
-    print(f"Webhook received for user , workflow {workflow_id},{data}")
+async def webhook_start(db: AsyncSession, workflow_id: UUID, data: dict) -> ResponseModel:
+    print(f"Webhook received for workflow {workflow_id}, data: {data}")
 
     try:
-        workflow=db.query(Workflow).filter(Workflow.id==workflow_id).first()
-        
+        result = await db.execute(select(Workflow).where(Workflow.id == workflow_id))
+        workflow = result.scalar_one_or_none()
+
         if not workflow:
             return ResponseModel(
                 status=Http.StatusNotFound,
-                message="workflow not found"
+                message="Workflow not found"
             )
+
         user_id = str(workflow.user_id)
 
         process_webhook_task.apply_async(
-        args=[user_id, str(workflow_id), data],
-        queue="webhooks"
+            args=[user_id, str(workflow_id), data],
+            queue="webhooks"
         )
 
-        workflow.status="running"
-        db.commit()
-        
+        workflow.status = "running"
+        await db.commit()
+
         return ResponseModel(
             status=Http.StatusOk,
             message="Workflow queued successfully",
             data={"workflow_id": str(workflow.id)}
         )
-        
-    except SQLAlchemyError as e:
-        db.rollback()
-        return ResponseModel(
-            status=Http.StatusInternalServerError,
-            message=str(e)
-        )
+
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         return ResponseModel(
             status=Http.StatusInternalServerError,
             message=str(e)
         )
-        

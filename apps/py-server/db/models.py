@@ -99,7 +99,7 @@ class Workflow(Base):
         secondary=workflow_credentials,
         back_populates="workflows"
     )
-    executions = relationship("WorkflowExecution", back_populates="workflow")
+    executions = relationship("WorkflowExecution", back_populates="workflow",  cascade="all, delete-orphan")
     
 class Node(Base):
     __tablename__ = "nodes"

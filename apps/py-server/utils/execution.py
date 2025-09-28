@@ -1,5 +1,5 @@
 from db.models import Node, Workflow,Edge
-from db.database import get_db
+from db.syncDB import get_db
 from sqlalchemy.orm import Session
 from nodes.Agents.llms.run_agent_node import run_agent_node
 from nodes.email.sendEmail import run_gmail_node

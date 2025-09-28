@@ -1,7 +1,6 @@
 from collections import defaultdict, deque
 
 def get_execution_order(nodes, edges):
-    # Build graph and indegree
     graph = defaultdict(list)
     indegree = {node.id: 0 for node in nodes}
 

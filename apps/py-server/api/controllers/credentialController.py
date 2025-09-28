@@ -1,18 +1,19 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, delete
 from sqlalchemy.exc import SQLAlchemyError
-from db.models import User,Credentials
-from models.schema import ResponseModel, CredentialsBase,CredentialResponse
+from db.models import User, Credentials
+from models.schema import ResponseModel, CredentialsBase, CredentialResponse
 from models.response import Http
 from uuid import UUID
+from typing import List
 
-def create_credentials(db: Session, credentials_data: CredentialsBase) -> ResponseModel:
+async def create_credentials(db: AsyncSession, credentials_data: CredentialsBase) -> ResponseModel:
     if not credentials_data.user_id:
-         return ResponseModel(
+        return ResponseModel(
             status=Http.StatusNotFound,
             message="UnAuthorized",
             data=None
         )
-        
     try:
         new_credentials = Credentials(
             name=credentials_data.name,
@@ -20,13 +21,11 @@ def create_credentials(db: Session, credentials_data: CredentialsBase) -> Respon
             data=credentials_data.data,
             user_id=credentials_data.user_id,
         )
-
         db.add(new_credentials)
-        db.commit()
-        db.refresh(new_credentials)
+        await db.commit()
+        await db.refresh(new_credentials)
 
-        credential_response = CredentialResponse.model_validate(new_credentials)  # <-- FIXED
-
+        credential_response = CredentialResponse.model_validate(new_credentials)
         return ResponseModel(
             status=Http.StatusOk,
             message="Credentials created successfully",
@@ -34,46 +33,46 @@ def create_credentials(db: Session, credentials_data: CredentialsBase) -> Respon
         )
 
     except SQLAlchemyError as e:
-        db.rollback()
+        await db.rollback()
         return ResponseModel(
             status=Http.StatusInternalServerError,
             message=f"Database error occurred: {str(e)}",
             data=None
         )
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         return ResponseModel(
             status=Http.StatusInternalServerError,
             message=f"An unexpected error occurred: {str(e)}",
             data=None
         )
-        
 
-def get_credentials(db:Session,user_id)->ResponseModel:
 
+async def get_credentials(db: AsyncSession, user_id: str) -> ResponseModel:
     if not user_id:
         return ResponseModel(
             status=Http.StatusNotFound,
             message="UnAuthorized",
             data=None
         )
-        
     try:
-        user=db.query(User).filter(User.id==user_id).first()
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
         if not user:
             return ResponseModel(
                 status=Http.StatusNotFound,
                 message="User not found",
                 data=None
             )
-        creds=db.query(Credentials).filter(Credentials.user_id==user_id).all()
-        response_data = []
-        for c in creds:
-            response_data.append(CredentialResponse.model_validate(c))
-        
+
+        result = await db.execute(select(Credentials).where(Credentials.user_id == user_id))
+        from typing import Sequence
+        creds: Sequence[Credentials] = result.scalars().all()
+
+        response_data = [CredentialResponse.model_validate(c) for c in creds]
         return ResponseModel(
             status=Http.StatusOk,
-            message="Credentails fetched successfully",
+            message="Credentials fetched successfully",
             data=response_data
         )
     except SQLAlchemyError as e:
@@ -85,53 +84,59 @@ def get_credentials(db:Session,user_id)->ResponseModel:
     except Exception as e:
         return ResponseModel(
             status=Http.StatusInternalServerError,
-            message=f"An unexpected error occured: {str(e)}",
+            message=f"An unexpected error occurred: {str(e)}",
             data=None
         )
-       
-        
-def delete_credentails(db:Session,credential_id: UUID,user_id:str)->ResponseModel:
+
+
+async def delete_credentials(db: AsyncSession, credential_id: UUID, user_id: str) -> ResponseModel:
     if not user_id:
         return ResponseModel(
             status=Http.StatusNotFound,
             message="UnAuthorized",
             data=None
         )
-        
     try:
-        user=db.query(User).filter(User.id==user_id).first()
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
         if not user:
             return ResponseModel(
                 status=Http.StatusNotFound,
                 message="User not found",
                 data=None
             )
-        
-        credential=db.query(Credentials).filter(Credentials.id==credential_id,Credentials.user_id==user_id).first()
+
+        result = await db.execute(
+            select(Credentials).where(Credentials.id == credential_id, Credentials.user_id == user_id)
+        )
+        credential = result.scalar_one_or_none()
         if not credential:
             return ResponseModel(
                 status=Http.StatusNotFound,
-                message="Credentails not found",
+                message="Credentials not found",
                 data=None
             )
-        db.delete(credential)
-        db.commit()
+
+        await db.delete(credential)
+        await db.commit()
+
         return ResponseModel(
             status=Http.StatusOk,
-            message="credentail deleted successfully",
+            message="Credential deleted successfully",
             data=None
         )
+
     except SQLAlchemyError as e:
-        db.rollback()
+        await db.rollback()
         return ResponseModel(
             status=Http.StatusInternalServerError,
-            message=f"Database error occured: {str(e)}",
+            message=f"Database error occurred: {str(e)}",
             data=None
         )
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         return ResponseModel(
             status=Http.StatusInternalServerError,
-            message=f"An internal server error occured :{str(e)}",
+            message=f"An unexpected error occurred: {str(e)}",
             data=None
         )

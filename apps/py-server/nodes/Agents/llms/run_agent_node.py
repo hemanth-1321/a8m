@@ -1,7 +1,7 @@
 from db.models import Node, Edge,Workflow
 from sqlalchemy.orm import Session
 from typing import Dict, Any
-from db.database import get_db
+from db.syncDB import get_db
 from langchain import hub
 from langchain.agents import AgentExecutor,create_react_agent
 from utils.get_credentails import get_credentials

@@ -1,9 +1,10 @@
 import bcrypt
 import jwt
 from db.models import User
+from sqlalchemy.future import select
 from models.response import Http
 from models.schema import UserModel , UserResponse,ResponseModel,UserTokenResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 
 SECRET_KEY = "secret"  
@@ -12,34 +13,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 
 
-#user signup
-def signup_user(user: UserModel, db: Session) -> tuple[ResponseModel, UserResponse | None]:
-    existing_user = db.query(User).filter(User.email == user.email).first()
-    if existing_user:
-        return ResponseModel(status=Http.StatusBadGateway, message="User already exists"), None
 
-    # Hash password
-    password_hash = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt())
-    password_hash_str = password_hash.decode('utf-8')  # convert to string for DB
-
-    # Create new user
-    new_user = User(
-        email=user.email,
-        password=password_hash_str
-    )
-    db.add(new_user)
-    print(f"new useer",new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    user_response = UserResponse(
-        id=str(new_user.id),
-        email=str(new_user.email)
-    )
-    return ResponseModel(status=Http.StatusOk,message="User crreated sucessfully"),user_response
-
-
-# retrurn jwt token
 def create_access_token(data: dict):
     print(data)
     to_encode=data.copy()
@@ -51,9 +25,31 @@ def create_access_token(data: dict):
     print("jwt _token",encoded_jwt)
     return encoded_jwt
 
-## signin controller
-def signin_user(email: str, password: str, db: Session) -> tuple[ResponseModel, UserTokenResponse | None]:
-    user = db.query(User).filter(User.email == email).first()
+#user signup
+async def signup_user(user: UserModel, db: AsyncSession) -> tuple[ResponseModel, UserResponse | None]:
+    # Check if user exists
+    result = await db.execute(select(User).where(User.email == user.email))
+    existing_user = result.scalar_one_or_none()
+    if existing_user:
+        return ResponseModel(status=Http.StatusBadRequest, message="User already exists"), None
+
+    # Hash password
+    password_hash = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    # Create new user
+    new_user = User(email=user.email, password=password_hash)
+    db.add(new_user)
+    await db.commit()      
+    await db.refresh(new_user)  
+
+    user_response = UserResponse(id=str(new_user.id), email=str(new_user.email))
+    return ResponseModel(status=Http.StatusOk, message="User created successfully"), user_response
+
+
+
+async def signin_user(email: str, password: str, db: AsyncSession) -> tuple[ResponseModel, UserTokenResponse | None]:
+    result=await db.execute(select(User).where(User.email==email))
+    user = result.scalar_one_or_none()
     if not user:
         return ResponseModel(status=Http.StatusNotFound, message="User not found"), None
 
