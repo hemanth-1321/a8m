@@ -1,20 +1,17 @@
 "use client";
 
-import { TOKEN } from "@/lib/config";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { useTheme } from "next-themes";
+import { useEffect } from "react";
 import { motion } from "motion/react";
+import { useAuthStore } from "@/store/authStore";
 
 export default function Page() {
-  const [token, setToken] = useState<string | null>(null);
   const router = useRouter();
-  const { theme } = useTheme();
+  const { token, loadToken } = useAuthStore();
 
   useEffect(() => {
-    const storedToken = localStorage.getItem(TOKEN);
-    setToken(storedToken);
-  }, []);
+    loadToken();
+  }, [loadToken]);
 
   return (
     <div className="min-h-screen relative overflow-hidden transition-colors duration-500 bg-white dark:bg-neutral-950">
@@ -58,9 +55,6 @@ export default function Page() {
                   className="w-full sm:w-auto cursor-pointer text-black dark:text-neutral-900 bg-white hover:bg-gray-100 dark:bg-white dark:hover:bg-gray-200 py-3 px-8 rounded-lg font-semibold text-base transition-all duration-300"
                 >
                   Start automating
-                </button>
-                <button className="w-full sm:w-auto text-neutral-900 dark:text-white bg-transparent border border-gray-400 dark:border-gray-600 hover:border-gray-600 dark:hover:border-gray-400 py-3 px-8 rounded-lg font-semibold text-base transition-all duration-300">
-                  View pricing
                 </button>
               </>
             ) : (

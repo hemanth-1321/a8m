@@ -8,7 +8,16 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Mail, Plus, Github, Zap, Workflow, Bot } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import {
+  Mail,
+  Plus,
+  Github,
+  Zap,
+  Workflow,
+  Bot,
+  MessageSquare,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { providers } from "@/lib/actionProviders";
@@ -18,6 +27,7 @@ import ManualTriggerDialog from "./ManualTriggerDialog";
 import EmailDialog from "./EmailDialog";
 import AiAgentDialog from "./AiAgentDialog";
 import GitWebhookDialog from "./GitWebhookDialog";
+import TelegramDialog from "./TelegramDialog";
 
 interface SidebarProps {
   onAddNode: (node: any) => void;
@@ -37,15 +47,16 @@ export default function Sidebar({
   const [manualTriggerDialogOpen, setManualTriggerDialogOpen] = useState(false);
   const [aiAgentDialogOpen, setAiAgentDialogOpen] = useState(false);
   const [gitWebhookDialogOpen, setGitWebhookDialogOpen] = useState(false);
+  const [telegramDialogOpen, setTelegramDialogOpen] = useState(false);
 
   const handleAddNode = (node: any) => {
     onAddNode(node);
     toast.success(`${node.name} node added successfully!`);
   };
 
-  // Exclude Gmail + AI Agent from normal providers
+  // Exclude Gmail + AI Agent + Telegram from normal providers
   const visibleProviders = providers.filter(
-    (p) => !p.hidden && !["gmail", "ai-agent"].includes(p.id)
+    (p) => !p.hidden && !["gmail", "ai-agent", "telegram"].includes(p.id)
   );
 
   const triggerTypes = visibleProviders.filter((p) =>
@@ -53,7 +64,14 @@ export default function Sidebar({
   );
   const otherProviders = visibleProviders.filter(
     (p) =>
-      !["manual-trigger", "form", "webhook", "gmail", "github"].includes(p.id)
+      ![
+        "manual-trigger",
+        "form",
+        "webhook",
+        "gmail",
+        "github",
+        "telegram",
+      ].includes(p.id)
   );
 
   const renderProviderButton = (provider: any) => {
@@ -97,16 +115,13 @@ export default function Sidebar({
       <Button
         key={provider.id}
         variant="outline"
-        className="group justify-start gap-3 w-full h-14 bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 border-gray-200 hover:border-blue-300 transition-all duration-200 hover:shadow-md relative overflow-hidden"
+        className="justify-start gap-3 w-full h-12 text-left font-medium hover:bg-accent transition-colors"
         onClick={() => setSelected(provider)}
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-5 transition-opacity duration-200" />
-        <div className="p-2 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 group-hover:from-blue-100 group-hover:to-purple-100 transition-all duration-200">
-          <provider.icon className="h-5 w-5 text-gray-600 group-hover:text-blue-600 transition-colors duration-200" />
+        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-muted">
+          <provider.icon className="h-4 w-4 text-muted-foreground" />
         </div>
-        <span className="font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
-          {provider.name}
-        </span>
+        <span>{provider.name}</span>
       </Button>
     );
   };
@@ -114,134 +129,154 @@ export default function Sidebar({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button
-          variant="default"
-          size="icon"
-          className="relative h-12 w-12 bg-gradient-to-br from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200 rounded-2xl group"
-        >
-          <div className="absolute inset-0 bg-white opacity-20 rounded-2xl group-hover:opacity-30 transition-opacity duration-200" />
-          <Plus size={24} className="relative z-10" />
+        <Button variant="default" size="icon" className="h-10 w-10 rounded-md">
+          <Plus className="h-4 w-4" />
         </Button>
       </SheetTrigger>
 
-      <SheetContent
-        side="right"
-        className="w-80 sm:w-96 bg-gradient-to-b from-gray-50 to-white border-l-2 border-gray-200"
-      >
-        <SheetHeader className="pb-6 border-b border-gray-200">
-          <SheetTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Add Nodes
-          </SheetTitle>
-          <p className="text-sm text-gray-600 mt-1">
+      <SheetContent side="right" className="w-80 sm:w-96">
+        <SheetHeader className="pb-4">
+          <SheetTitle className="text-xl font-semibold">Add Nodes</SheetTitle>
+          <p className="text-sm text-muted-foreground">
             Build your automation workflow
           </p>
         </SheetHeader>
 
-        <div className="mt-6 flex flex-col gap-6 h-full overflow-y-auto pb-4">
+        <div className="flex flex-col gap-6 h-full overflow-y-auto pb-4 p-2">
           {/* Trigger types */}
           {nodes.length === 0 && triggerTypes.length > 0 && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-gradient-to-br from-green-100 to-emerald-100">
-                  <Zap className="h-4 w-4 text-green-600" />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-medium">Triggers</h3>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Triggers
-                </h3>
-                <div className="flex-1 h-px bg-gradient-to-r from-green-200 to-transparent" />
+                <p className="text-xs text-muted-foreground">
+                  Start your workflow with these triggers
+                </p>
               </div>
-              <div className="grid gap-3">
+              <div className="flex justify-start items-center gap-2">
                 {triggerTypes.map(renderProviderButton)}
               </div>
             </div>
           )}
 
-          {/* Integrations: Gmail + AI Agent */}
+          {/* Integrations */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100">
-                <Bot className="h-4 w-4 text-purple-600" />
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Bot className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-medium">Integrations</h3>
               </div>
-              <h3 className="text-lg font-semibold text-gray-800">
-                Integrations
-              </h3>
-              <div className="flex-1 h-px bg-gradient-to-r from-purple-200 to-transparent" />
+              <p className="text-xs text-muted-foreground">
+                Connect with external services
+              </p>
             </div>
-            <div className="grid gap-3">
-              <div className="relative group">
-                <EmailDialog
-                  provider={providers.find((p) => p.id === "gmail")}
-                  open={emailDialogOpen}
-                  onOpenChange={setEmailDialogOpen}
-                  onAddNode={handleAddNode}
-                />
-              </div>
+            <div className="flex justify-start items-center gap-2">
+              {/* Gmail Integration */}
+              <EmailDialog
+                provider={providers.find((p) => p.id === "gmail")}
+                open={emailDialogOpen}
+                onOpenChange={setEmailDialogOpen}
+                onAddNode={handleAddNode}
+              />
 
-              <div className="relative group">
-                <AiAgentDialog
-                  provider={providers.find((p) => p.id === "ai-agent")}
-                  open={aiAgentDialogOpen}
-                  onOpenChange={setAiAgentDialogOpen}
-                  onAddNode={handleAddNode}
-                />
-              </div>
+              {/* AI Agent Integration */}
+              <AiAgentDialog
+                provider={providers.find((p) => p.id === "ai-agent")}
+                open={aiAgentDialogOpen}
+                onOpenChange={setAiAgentDialogOpen}
+                onAddNode={handleAddNode}
+              />
+
+              {/* Telegram Integration */}
+              <TelegramDialog
+                provider={providers.find((p) => p.id === "telegram")}
+                open={telegramDialogOpen}
+                onOpenChange={setTelegramDialogOpen}
+                onAddNode={handleAddNode}
+              />
             </div>
           </div>
 
-          <div className="relative group">
-            <GitWebhookDialog
-              provider={{ name: "GitHub Webhook" }}
-              open={gitWebhookDialogOpen}
-              onOpenChange={setGitWebhookDialogOpen}
-              onAddNode={handleAddNode}
-            />
+          {/* GitHub Webhook */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Github className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-medium">Version Control</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Connect with your repositories
+              </p>
+            </div>
+            <div className="space-y-2">
+              <GitWebhookDialog
+                provider={{ name: "GitHub Webhook", icon: Github }}
+                open={gitWebhookDialogOpen}
+                onOpenChange={setGitWebhookDialogOpen}
+                onAddNode={handleAddNode}
+              />
+            </div>
           </div>
 
           {/* Other providers */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100">
-                <Workflow className="h-4 w-4 text-blue-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-800">
-                {nodes.length === 0 ? "Actions" : "Add Nodes"}
-              </h3>
-              <div className="flex-1 h-px bg-gradient-to-r from-blue-200 to-transparent" />
-            </div>
-            <div className="grid gap-3">
-              {otherProviders.map(renderProviderButton)}
-            </div>
-
-            {selected && (
-              <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 rounded-lg bg-white shadow-sm">
-                    <selected.icon className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-800">
-                      {selected.name}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      Ready to add to workflow
-                    </p>
-                  </div>
+          {otherProviders.length > 0 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Workflow className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-medium">
+                    {nodes.length === 0 ? "Actions" : "Additional Nodes"}
+                  </h3>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Add more functionality to your workflow
+                </p>
+              </div>
+              <div className="space-y-2">
+                {otherProviders.map(renderProviderButton)}
+              </div>
+            </div>
+          )}
+
+          {/* Selected Node Preview */}
+          {selected && (
+            <Card className="p-4 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-md bg-muted">
+                  <selected.icon className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <h4 className="font-medium">{selected.name}</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Ready to add to workflow
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
                 <Button
-                  variant="default"
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                  size="sm"
                   onClick={() => {
                     onAddNode(selected);
                     setSelected(null);
                     toast.success(`${selected.name} node added!`);
                   }}
+                  className="w-full"
                 >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Add {selected.name} Node
+                  Add Node
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelected(null)}
+                  className="w-full"
+                >
+                  Cancel
                 </Button>
               </div>
-            )}
-          </div>
+            </Card>
+          )}
         </div>
       </SheetContent>
     </Sheet>

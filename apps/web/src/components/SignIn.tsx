@@ -13,7 +13,7 @@ const SignIn = () => {
   const [password, setPassword] = useState("");
   const router = useRouter();
   const { setToken } = useAuthStore.getState();
-
+  console.log("email", email, password);
   const handleSignIn = async () => {
     try {
       const res = await axios.post(`${BACKEND_URL}/auth/signin`, {

@@ -126,7 +126,7 @@ class Edge(Base):
     
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     source_node_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False) 
-    target_node_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)  # ✅ Changed from String to UUID
+    target_node_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False) 
     workflow_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), 
         ForeignKey("workflows.id", ondelete="CASCADE"), 

@@ -1,4 +1,4 @@
-from db.models import Node, Workflow
+from db.models import Node, Workflow,Edge
 from db.database import get_db
 from sqlalchemy.orm import Session
 from nodes.Agents.llms.run_agent_node import run_agent_node
@@ -6,12 +6,12 @@ from nodes.email.sendEmail import run_gmail_node
 
 NODE_EXECUTION_MAP = {
     "send email": run_gmail_node,
+    "send & wait for email": run_gmail_node,
     "agent": run_agent_node,
+    "ai agent": run_agent_node,   
     "groq": run_agent_node,
     "gemini": run_agent_node,
-    "send & wait for email": run_gmail_node,
 }
-
 
 def execution(node_id: str, workflow_id: str, initial_data: dict, resume: bool = False):
     """
@@ -57,6 +57,7 @@ def execution(node_id: str, workflow_id: str, initial_data: dict, resume: bool =
                     output_data = func(node, initial_data, user_id=workflow.user_id)
                 else:
                     output_data = func(node, initial_data, user_id=workflow.user_id)
+                    print("output data", output_data)
             else:
                 output_data = {"result": f"No handler for {node_name}"}
         else:
@@ -64,6 +65,12 @@ def execution(node_id: str, workflow_id: str, initial_data: dict, resume: bool =
 
         node.status = "completed"
         db.commit()
+
+        edges = db.query(Edge).filter(Edge.source_node_id == node.id).all()
+        for edge in edges:
+            print(f"Passing output to next node {edge.target_node_id}")
+            execution(str(edge.target_node_id), workflow_id, output_data, resume=False)
+
         return output_data
 
     except Exception as exc:

@@ -138,7 +138,10 @@ export default function FormDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" className="justify-start gap-2">
+        <Button
+          variant="outline"
+          className="justify-start gap-2 mt-2 border-dashed border-green-300 text-blue-600 hover:bg-green-50"
+        > 
           <provider.icon className="h-4 w-4" />
           {provider.name}
         </Button>

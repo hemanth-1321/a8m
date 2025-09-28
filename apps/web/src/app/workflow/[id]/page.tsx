@@ -105,21 +105,6 @@ const page = () => {
     }
   }, [loading, token, router]);
 
-  // Handle escape key to cancel edge creation
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && isConnecting) {
-        setIsConnecting(false);
-        setEdges((edges) => [...edges]);
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isConnecting]);
-
   const onNodeChange = useCallback(
     (changes: NodeChange[]) =>
       setNodes((nds) =>
@@ -175,6 +160,9 @@ const page = () => {
     const newId = uuidv4();
     const providerData = provider.data || {};
 
+    // Ensure we have a valid type - use provider.type first, fallback to provider.id, then to 'unknown'
+    const nodeType = provider.type || provider.id || "unknown";
+
     const newNode: Node<NodeData> = {
       id: newId,
       type: "providerNode",
@@ -184,7 +172,7 @@ const page = () => {
         ...providerData,
         trigger: "Manual",
         enabled: true,
-        type: provider.type || provider.id,
+        type: nodeType,
         id: provider.id,
       },
     };
@@ -218,7 +206,7 @@ const page = () => {
             id: n.id,
             name: n.data.name,
             trigger: n.data.trigger,
-            type: n.data.type || n.data.id,
+            type: n.data.type || n.data.id || "unknown",
           })),
           edges: edges.map((e) => ({
             id: e.id,
@@ -263,23 +251,30 @@ const page = () => {
         );
 
         const wf = response.data.data;
+        console.log("workflow", wf);
 
         setWorkflowTitle(wf.title);
         setWorkflowEnabled(wf.enabled);
 
-        const loadNodes: Node<NodeData>[] = (wf.nodes || []).map((n) => ({
-          id: n.id,
-          type: "providerNode",
-          position: { x: n.position_x ?? 200, y: n.position_y ?? 200 },
-          data: {
-            ...n.data,
-            name: n.title,
-            trigger: n.trigger || "Manual",
-            enabled: n.enabled ?? true,
-            type: n.type || n.provider_type,
-            id: n.provider_type,
-          },
-        }));
+        const loadNodes: Node<NodeData>[] = (wf.nodes || []).map((n) => {
+          // Ensure we have a valid type from the loaded data
+          const nodeType =
+            n.data?.type || n.provider_type || n.data?.data?.type || "unknown";
+
+          return {
+            id: n.id,
+            type: "providerNode",
+            position: { x: n.position_x ?? 200, y: n.position_y ?? 200 },
+            data: {
+              ...n.data,
+              name: n.title,
+              trigger: n.trigger || "Manual",
+              enabled: n.enabled ?? true,
+              type: nodeType,
+              id: n.provider_type || nodeType,
+            },
+          };
+        });
 
         const loadEdges: Edge[] = (wf.edges || []).map((e) => ({
           id: e.id,
@@ -293,7 +288,7 @@ const page = () => {
           },
           animated: true,
         }));
-
+        console.log("nodes and edges", loadNodes, loadEdges);
         setNodes(loadNodes);
         setEdges(loadEdges);
 
@@ -335,18 +330,26 @@ const page = () => {
     const payload = {
       title: workflowTitle,
       enabled: workflowEnabled,
-      nodes: nodes.map((n) => ({
-        id: n.id,
-        title: n.data.name,
-        trigger: n.data.trigger || "Manual",
-        enabled: n.data.enabled ?? true,
-        data: n.data,
-        position_x: n.position.x,
-        position_y: n.position.y,
-        workflow_id: id,
-        type: n.data.type || n.data.id,
-        provider_type: n.data.type || n.data.id,
-      })),
+      nodes: nodes.map((n) => {
+        // Ensure type is always present and valid
+        const nodeType = n.data.type || n.data.id || "unknown";
+
+        return {
+          id: n.id,
+          title: n.data.name || "Unnamed Node",
+          trigger: n.data.trigger || "Manual",
+          enabled: n.data.enabled ?? true,
+          data: {
+            ...n.data,
+            type: nodeType, // Ensure type is in data as well
+          },
+          position_x: n.position.x,
+          position_y: n.position.y,
+          workflow_id: id,
+          type: nodeType, // Main type field - this was missing!
+          provider_type: nodeType,
+        };
+      }),
       edges: validEdges.map((e) => ({
         id: e.id,
         source_node_id: e.source,
@@ -358,6 +361,11 @@ const page = () => {
     };
 
     try {
+      console.log(
+        "Saving workflow with payload:",
+        JSON.stringify(payload, null, 2)
+      );
+
       const response = await axios.post(
         `${BACKEND_URL}/workflows/${id}`,
         payload,
@@ -368,17 +376,38 @@ const page = () => {
 
       const savedWf = response.data.data;
 
-      const syncedNodes: Node<NodeData>[] = savedWf.nodes.map((n: any) => ({
-        id: n.id,
-        type: "providerNode",
-        position: { x: n.position_x, y: n.position_y },
-        data: {
-          ...n.data,
-          name: n.title,
-          type: n.type || n.provider_type,
-          id: n.provider_type,
-        },
-      }));
+      // FIXED: Better type handling in synced nodes
+      const syncedNodes: Node<NodeData>[] = savedWf.nodes.map((n: any) => {
+        // Priority order: saved type -> data.type -> provider_type -> fallback to "unknown"
+        const nodeType = n.type || n.data?.type || n.provider_type || "unknown";
+
+        // Find the original node to preserve its data structure
+        const originalNode = nodes.find((node) => node.id === n.id);
+        const originalData = originalNode?.data || {};
+
+        return {
+          id: n.id,
+          type: "providerNode",
+          position: { x: n.position_x, y: n.position_y },
+          data: {
+            // Preserve original data structure
+            ...originalData,
+            // Override with saved data if available
+            ...(n.data || {}),
+            // Ensure these critical fields are always present
+            name: n.title,
+            type: nodeType,
+            id: originalData.id || n.provider_type || nodeType,
+            // Preserve other important fields from original data
+            icon: originalData.icon,
+            color: originalData.color,
+            subject: originalData.subject,
+            body: originalData.body,
+            sendAndWait: originalData.sendAndWait,
+            to: originalData.to,
+          },
+        };
+      });
 
       const validNodeIds = new Set(syncedNodes.map((n) => n.id));
       const syncedEdges: Edge[] = savedWf.edges
@@ -407,10 +436,18 @@ const page = () => {
     } catch (error: any) {
       setSaveWorkflowLoading(false);
       console.error("Failed to save workflow:", error.response || error);
-      toast.error("Failed to save workflow!");
+
+      // Log the validation errors for debugging
+      if (error.response?.data?.detail) {
+        console.error("Validation errors:", error.response.data.detail);
+        toast.error(
+          `Validation error: ${error.response.data.detail[0]?.msg || "Unknown validation error"}`
+        );
+      } else {
+        toast.error("Failed to save workflow!");
+      }
     }
   };
-
   if (loading || workflowLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
