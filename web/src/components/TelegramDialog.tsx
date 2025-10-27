@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,16 +11,36 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { MessageSquare, Bot, Hash } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
+import { LucideIcon } from "lucide-react";
+import { MessageSquare } from "lucide-react";
+
+interface TelegramNodeData {
+  botToken: string;
+  chatId: string;
+  message: string;
+}
+
+interface TelegramNode {
+  id: string;
+  name: string;
+  type: "action";
+  icon: LucideIcon;
+  color: string;
+  data: TelegramNodeData;
+}
 
 interface TelegramDialogProps {
-  provider: any;
+  provider: {
+    id: string;
+    name: string;
+    icon: LucideIcon;
+  };
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddNode: (node: any) => void;
+  onAddNode: (node: TelegramNode) => void;
 }
 
 export default function TelegramDialog({
@@ -28,44 +49,40 @@ export default function TelegramDialog({
   onOpenChange,
   onAddNode,
 }: TelegramDialogProps) {
-  const [botToken, setBotToken] = useState("");
-  const [chatId, setChatId] = useState("");
-  const [nodeName, setNodeName] = useState("Telegram Bot");
+  const [botToken, setBotToken] = useState<string>("");
+  const [chatId, setChatId] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
 
   const handleAddTelegramNode = () => {
-    if (!botToken.trim()) {
-      toast.error("Bot Token is required");
+    if (!botToken || !chatId || !message) {
+      toast.error("Please fill in all fields.");
       return;
     }
 
-    if (!chatId.trim()) {
-      toast.error("Chat ID is required");
-      return;
-    }
-
-    const telegramNode = {
+    const telegramNode: TelegramNode = {
       id: `telegram-${Date.now()}`,
-      name: nodeName.trim(),
+      name: "Telegram Message",
       type: "action",
-      icon: "MessageSquare",
-      color: "from-blue-400 to-blue-600",
+      icon: MessageSquare,
+      color: "from-blue-500 to-blue-600",
       data: {
-        bot_token: botToken.trim(),
-        chat_id: chatId.trim(),
-        node_name: nodeName.trim(),
+        botToken: botToken.trim(),
+        chatId: chatId.trim(),
+        message: message.trim(),
       },
     };
 
     onAddNode(telegramNode);
     resetForm();
-    toast.success(`Telegram node "${nodeName}" created successfully`);
+
+    toast.success("Telegram message node added successfully!");
   };
 
   const resetForm = () => {
     onOpenChange(false);
     setBotToken("");
     setChatId("");
-    setNodeName("Telegram Bot");
+    setMessage("");
   };
 
   return (
@@ -79,122 +96,62 @@ export default function TelegramDialog({
       <DialogTrigger asChild>
         <Button
           variant="outline"
-          className="justify-start gap-2 mt-2 border-dashed border-green-300 text-blue-600 hover:bg-green-50"
+          className="justify-start gap-2 mt-2 border-dashed border-blue-300 text-blue-600 hover:bg-blue-50"
         >
-          <provider.icon className="h-4 w-4" />
-          {provider.name}
+          <MessageSquare className="h-4 w-4" />
+          Telegram
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader className="pb-4">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            Create Telegram Bot
+            Send Telegram Message
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Node Name */}
+        <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Node Name *</label>
+            <Label htmlFor="botToken">Bot Token</Label>
             <Input
-              placeholder="e.g., Telegram Notifications, Alert Bot"
-              value={nodeName}
-              onChange={(e) => setNodeName(e.target.value)}
-              className="h-10"
-            />
-          </div>
-
-          {/* Bot Token */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Bot className="h-4 w-4" />
-              Bot Token *
-            </label>
-            <Input
-              type="password"
-              placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+              id="botToken"
+              placeholder="Enter your Telegram Bot Token"
+              type="text"
               value={botToken}
               onChange={(e) => setBotToken(e.target.value)}
-              className="h-10 font-mono text-sm"
             />
-            <p className="text-xs text-muted-foreground">
-              Get your bot token from{" "}
-              <a
-                href="https://t.me/botfather"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                @BotFather
-              </a>{" "}
-              on Telegram
-            </p>
           </div>
 
-          {/* Chat ID */}
           <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Hash className="h-4 w-4" />
-              Chat ID *
-            </label>
+            <Label htmlFor="chatId">Chat ID</Label>
             <Input
-              placeholder="-123456789 or @username"
+              id="chatId"
+              placeholder="Enter the Chat ID"
+              type="text"
               value={chatId}
               onChange={(e) => setChatId(e.target.value)}
-              className="h-10 font-mono text-sm"
             />
-            <p className="text-xs text-muted-foreground">
-              Chat ID can be a number (e.g., -123456789) or username (e.g.,
-              @channelname)
-            </p>
           </div>
 
-          {/* Help Card */}
-          <Card className="p-4 bg-blue-50 border-blue-200">
-            <h4 className="text-sm font-semibold text-blue-900 mb-2">
-              How to get Chat ID:
-            </h4>
-            <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
-              <li>
-                For personal chat: Send a message to your bot, then visit{" "}
-                <code className="bg-blue-100 px-1 rounded">
-                  https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates
-                </code>
-              </li>
-              <li>
-                For groups: Add your bot to the group and use the group's
-                negative ID
-              </li>
-              <li>
-                For channels: Use @channelname or the channel's negative ID
-              </li>
-            </ul>
-          </Card>
-
-          {/* Configuration Summary */}
-          {botToken && chatId && (
-            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-              <span className="text-sm font-medium">
-                {nodeName || "Untitled Telegram Bot"}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                Ready to send messages
-              </span>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="message">Message</Label>
+            <Input
+              id="message"
+              placeholder="Enter the message to send"
+              type="text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+          </div>
         </div>
 
         <DialogFooter className="gap-2 pt-4">
           <Button type="button" variant="outline" onClick={resetForm}>
             Cancel
           </Button>
-          <Button
-            onClick={handleAddTelegramNode}
-            disabled={!botToken.trim() || !chatId.trim() || !nodeName.trim()}
-          >
-            Create Telegram Bot
+          <Button onClick={handleAddTelegramNode} disabled={!botToken || !chatId || !message}>
+            Add Telegram Message
           </Button>
         </DialogFooter>
       </DialogContent>
