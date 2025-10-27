@@ -51,7 +51,7 @@ export default function Sidebar({
 
   const handleAddNode = (node: any) => {
     onAddNode(node);
-    toast.success(`${node.name} node added successfully!`);
+    toast.success(`${node.name} node added successfully!`)
   };
 
   // Exclude Gmail + AI Agent + Telegram from normal providers
@@ -260,7 +260,7 @@ export default function Sidebar({
                   onClick={() => {
                     onAddNode(selected);
                     setSelected(null);
-                    toast.success(`${selected.name} node added!`);
+                    toast.success(`${selected.name} node added!`)
                   }}
                   className="w-full"
                 >
