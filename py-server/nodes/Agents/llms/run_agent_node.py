@@ -6,8 +6,9 @@ from langchain_classic import hub
 from langchain.agents import create_agent
 from utils.get_credentails import get_credentials
 from .get_llm import get_llm
-from ..tools.tools import WEBSEARCH_TOOL
+from ..tools.tools import WEBSEARCH_TOOL, WEATHER_TOOL
 import json
+
 def run_agent_node(node: Node, input_data: Dict[str, Any], user_id) -> Dict[str, Any]:
     print("in the run agent")
     db: Session = next(get_db())
@@ -50,13 +51,14 @@ def run_agent_node(node: Node, input_data: Dict[str, Any], user_id) -> Dict[str,
         available_tools = []
         if "websearch" in tools_list:
             available_tools.append(WEBSEARCH_TOOL)
+        if "weather" in tools_list:
+            available_tools.append(WEATHER_TOOL)
 
         agent = create_agent(
             model=llm,
-            # tools=available_tools
+            tools=available_tools
         )
 
-      
         final_prompt = prompt_template.format(input=prompt, **input_data)
 
         agent_input = {"messages": [{"role": "user", "content": final_prompt}]}
@@ -83,6 +85,3 @@ def run_agent_node(node: Node, input_data: Dict[str, Any], user_id) -> Dict[str,
     except Exception as e:
         print(f"Error in agent node {node.id}: {e}")
         return {"error ": str(e)}
-
-
-
