@@ -19,7 +19,7 @@ export const providers = [
     type: "action",
     icon: Bot,
     Ai: true,
-    hidden: true, // hide from sidebar
+    hidden: true,
     color: "from-emerald-500 to-teal-600",
     description: "GPT models and AI services",
     fields: [{ label: "API Key", key: "api_key", placeholder: "sk-xxxx" }],
@@ -40,7 +40,7 @@ export const providers = [
     name: "AI Agent",
     type: "ai-agent",
     icon: Brain,
-    hidden: true, // hide from sidebar
+    hidden: true,
     color: "from-purple-500 to-pink-600",
     noCredentials: true,
     description: "LLM agent with tool selection",
@@ -51,21 +51,20 @@ export const providers = [
     name: "Gmail",
     type: "action",
     icon: Mail,
-    hidden: true, // hide from sidebar
+    hidden: true,
     color: "from-red-500 to-orange-600",
     description: "Email automation and management",
     fields: [
       { label: "OAuth Token", key: "oauth_token", placeholder: "ya29...." },
     ],
   },
-
   {
     id: "gemini",
     name: "Gemini",
     type: "action",
     icon: Sparkles,
     Ai: true,
-    hidden: true, // hide from sidebar
+    hidden: true,
     color: "from-indigo-500 to-purple-600",
     description: "Google's AI model platform",
     fields: [{ label: "API Key", key: "api_key", placeholder: "AIza-xxxx" }],
@@ -76,7 +75,7 @@ export const providers = [
     type: "action",
     icon: Zap,
     Ai: true,
-    hidden: true, // hide from sidebar
+    hidden: true,
     color: "from-yellow-500 to-orange-600",
     description: "High-speed AI inference",
     fields: [{ label: "API Key", key: "api_key", placeholder: "gsk-xxxx" }],
@@ -86,7 +85,7 @@ export const providers = [
     name: "Form",
     type: "form-builder",
     icon: FileText,
-    noCredentials: true, // exclude from credentials page
+    noCredentials: true,
     color: "from-blue-500 to-indigo-600",
     description: "Custom form builder",
     fields: [],
@@ -105,7 +104,7 @@ export const providers = [
     name: "Manual Trigger",
     type: "manual-trigger",
     icon: Play,
-    noCredentials: true, // exclude from credentials page
+    noCredentials: true,
     color: "from-purple-500 to-indigo-600",
     description: "Manual workflow trigger",
     fields: [],
