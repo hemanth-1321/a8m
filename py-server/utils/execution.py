@@ -1,16 +1,49 @@
-from db.models import Node, Workflow,Edge
+from db.models import Node, Workflow, Edge
 from db.syncDB import get_db
 from sqlalchemy.orm import Session
+import os
+import requests
 from nodes.Agents.llms.run_agent_node import run_agent_node
 from nodes.email.sendEmail import run_gmail_node
+
+def run_telegram_node(node, data, user_id=None, wait_for_reply=False):
+    """
+    Sends a message via Telegram Bot API.
+
+    Expected node.data to contain:
+        - chat_id: Telegram chat ID to send the message to.
+        - message: Text of the message to send.
+
+    If node.data does not contain these, it will look for 'chat_id' and 'message'
+    in the incoming data payload.
+    """
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if not token:
+        return {"error": "TELEGRAM_BOT_TOKEN not set"}
+
+    chat_id = (node.data or {}).get("chat_id") or data.get("chat_id")
+    if not chat_id:
+        return {"error": "chat_id not provided"}
+
+    message = (node.data or {}).get("message") or data.get("message") or ""
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": message}
+
+    try:
+        resp = requests.post(url, json=payload)
+        resp.raise_for_status()
+        return {"telegram_sent": True, "response": resp.json()}
+    except Exception as e:
+        return {"telegram_error": str(e)}
 
 NODE_EXECUTION_MAP = {
     "send email": run_gmail_node,
     "send & wait for email": run_gmail_node,
     "agent": run_agent_node,
-    "ai agent": run_agent_node,   
+    "ai agent": run_agent_node,
     "groq": run_agent_node,
     "gemini": run_agent_node,
+    "send telegram": run_telegram_node,
 }
 
 def execution(node_id: str, workflow_id: str, initial_data: dict, resume: bool = False):
