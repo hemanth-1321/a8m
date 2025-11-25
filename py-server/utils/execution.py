@@ -1,16 +1,20 @@
-from db.models import Node, Workflow,Edge
+from db.models import Node, Workflow, Edge
 from db.syncDB import get_db
 from sqlalchemy.orm import Session
 from nodes.Agents.llms.run_agent_node import run_agent_node
 from nodes.email.sendEmail import run_gmail_node
+from nodes.telegram.run_telegram_node import run_telegram_node
 
 NODE_EXECUTION_MAP = {
     "send email": run_gmail_node,
     "send & wait for email": run_gmail_node,
     "agent": run_agent_node,
-    "ai agent": run_agent_node,   
+    "ai agent": run_agent_node,
     "groq": run_agent_node,
     "gemini": run_agent_node,
+    "send telegram": run_telegram_node,
+    "send & wait for telegram": run_telegram_node,
+    "telegram": run_telegram_node,
 }
 
 def execution(node_id: str, workflow_id: str, initial_data: dict, resume: bool = False):
@@ -53,7 +57,18 @@ def execution(node_id: str, workflow_id: str, initial_data: dict, resume: bool =
                         db.commit()
                         print(f"Node {node.id} is waiting for reply. Workflow paused.")
                         return {"status": "waiting_for_reply"}
+                elif node_name == "send & wait for telegram":
+                    if resume:
+                        output_data = {"reply": initial_data}
+                    else:
+                        output_data = func(node, initial_data, user_id=workflow.user_id, wait_for_reply=True)
+                        node.status = "waiting_for_reply"
+                        db.commit()
+                        print(f"Node {node.id} is waiting for reply. Workflow paused.")
+                        return {"status": "waiting_for_reply"}
                 elif node_name == "send email":
+                    output_data = func(node, initial_data, user_id=workflow.user_id)
+                elif node_name == "send telegram":
                     output_data = func(node, initial_data, user_id=workflow.user_id)
                 else:
                     output_data = func(node, initial_data, user_id=workflow.user_id)
