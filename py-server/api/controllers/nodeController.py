@@ -4,8 +4,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from db.models import Node, User
 from models.schema import ResponseModel, NodeBase, nodeResponse
 from models.response import Http
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, BaseModel
 from uuid import UUID
+
+# Calculator request schema
+class CalculationRequest(BaseModel):
+    operation: str
+    operands: list[float]
 
 # CREATE NODE
 async def create_nodes(db: AsyncSession, node_data: NodeBase, user_id: str, workflow_id: UUID) -> ResponseModel:
@@ -84,3 +89,41 @@ async def delete_nodes(db: AsyncSession, node_id: UUID) -> ResponseModel:
     except Exception as e:
         await db.rollback()
         return ResponseModel(status=Http.StatusInternalServerError, message=f"Unexpected error: {str(e)}", data=None)
+
+
+# CALCULATOR
+async def calculate(db: AsyncSession, calc_req: CalculationRequest) -> ResponseModel:
+    """
+    Perform a basic arithmetic calculation based on the operation and operands provided.
+    Supported operations: add, subtract, multiply, divide.
+    """
+    try:
+        op = calc_req.operation.lower()
+        operands = calc_req.operands
+
+        if not operands or len(operands) < 2:
+            return ResponseModel(status=Http.StatusBadRequest, message="At least two operands required", data=None)
+
+        if op == "add":
+            result = sum(operands)
+        elif op == "subtract":
+            result = operands[0]
+            for value in operands[1:]:
+                result -= value
+        elif op == "multiply":
+            result = 1
+            for value in operands:
+                result *= value
+        elif op == "divide":
+            result = operands[0]
+            for value in operands[1:]:
+                if value == 0:
+                    return ResponseModel(status=Http.StatusBadRequest, message="Division by zero", data=None)
+                result /= value
+        else:
+            return ResponseModel(status=Http.StatusBadRequest, message=f"Unsupported operation '{calc_req.operation}'", data=None)
+
+        return ResponseModel(status=Http.StatusOk, message="Calculation successful", data={"result": result})
+
+    except Exception as e:
+        return ResponseModel(status=Http.StatusInternalServerError, message=f"Calculation error: {str(e)}", data=None)
