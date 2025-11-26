@@ -1,16 +1,19 @@
-from db.models import Node, Workflow,Edge
+from db.models import Node, Workflow, Edge
 from db.syncDB import get_db
 from sqlalchemy.orm import Session
 from nodes.Agents.llms.run_agent_node import run_agent_node
 from nodes.email.sendEmail import run_gmail_node
+from nodes.telegram.sendTelegram import send_telegram_message
 
 NODE_EXECUTION_MAP = {
     "send email": run_gmail_node,
     "send & wait for email": run_gmail_node,
     "agent": run_agent_node,
-    "ai agent": run_agent_node,   
+    "ai agent": run_agent_node,
     "groq": run_agent_node,
     "gemini": run_agent_node,
+    "send telegram": send_telegram_message,
+    "telegram": send_telegram_message,
 }
 
 def execution(node_id: str, workflow_id: str, initial_data: dict, resume: bool = False):
